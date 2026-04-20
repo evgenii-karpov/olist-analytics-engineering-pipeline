@@ -100,28 +100,30 @@ Output candidates:
 
 ## Phase 4: Airflow DAG Skeleton
 
+Status: in progress.
+
 Goal:
 
 Orchestrate ingestion, Redshift load, and dbt commands.
 
 Deliverables:
 
-- Airflow DAG.
-- Configurable runtime parameters.
-- Retries and failure handling.
+- Airflow DAG. Initial skeleton complete.
+- Configurable runtime parameters. Initial skeleton complete.
+- Retries and failure handling. Initial skeleton complete.
 - Task boundaries:
-  - validate dataset
-  - upload to S3
-  - copy to Redshift
-  - dbt snapshot
-  - dbt build
-  - dbt test
+  - validate dataset. Complete.
+  - upload to S3. Complete.
+  - copy to Redshift. Complete.
+  - dbt snapshot. Complete.
+  - dbt build. Complete.
+  - dbt test. Complete.
   - record audit status
 
 Output candidates:
 
 - `airflow/dags/olist_modern_data_stack.py`
-- `airflow/include/redshift_copy.sql`
+- `airflow/README.md`
 
 ## Phase 5: dbt Project Bootstrap
 

@@ -62,6 +62,12 @@ scripts/
   utilities/            Local helper scripts.
 ```
 
+Airflow DAG skeleton:
+
+```text
+airflow/dags/olist_modern_data_stack.py
+```
+
 ## Local Commands
 
 Generate source profiling docs:
