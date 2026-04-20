@@ -1,0 +1,36 @@
+# Local dataset artifacts
+olist.zip
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# dbt
+target/
+dbt_packages/
+logs/
+profiles.yml
+
+# Airflow
+airflow/logs/
+airflow/plugins/
+airflow/airflow.db
+airflow/webserver_config.py
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+aws_credentials*
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
