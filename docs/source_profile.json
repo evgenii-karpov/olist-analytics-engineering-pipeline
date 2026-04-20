@@ -1,0 +1,793 @@
+[
+  {
+    "file_name": "olist_customers_dataset.csv",
+    "entity_name": "customers",
+    "row_count": 99441,
+    "columns": [
+      {
+        "name": "customer_id",
+        "null_count": 0,
+        "non_null_count": 99441,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "06b8999e2fba1a1fbc88172c00ba8bc7",
+          "18955e83d337fd6b2def6b18a428ac77",
+          "4e7b3e00288586ebd08712fdd0374a03"
+        ],
+        "min_value": "00012a2ce6f8dcda20d059ce98491703",
+        "max_value": "ffffe8b65bbe3087b653a978c870db99"
+      },
+      {
+        "name": "customer_unique_id",
+        "null_count": 0,
+        "non_null_count": 99441,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "861eff4711a542e4b93843c6dd7febb0",
+          "290c77bc529b7ac935b93aa66c333dc3",
+          "060e732b5b29e8181a18229c7b0b2b5e"
+        ],
+        "min_value": "0000366f3b9a7992bf8c76cfdf3221e2",
+        "max_value": "ffffd2657e2aad2907e67c3e9daecbeb"
+      },
+      {
+        "name": "customer_zip_code_prefix",
+        "null_count": 0,
+        "non_null_count": 99441,
+        "inferred_type": "integer",
+        "redshift_raw_type": "varchar(16)",
+        "sample_values": [
+          "14409",
+          "09790",
+          "01151"
+        ],
+        "min_value": "01003",
+        "max_value": "99990"
+      },
+      {
+        "name": "customer_city",
+        "null_count": 0,
+        "non_null_count": 99441,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "franca",
+          "sao bernardo do campo",
+          "sao paulo"
+        ],
+        "min_value": "abadia dos dourados",
+        "max_value": "zortea"
+      },
+      {
+        "name": "customer_state",
+        "null_count": 0,
+        "non_null_count": 99441,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "SP",
+          "SC",
+          "MG"
+        ],
+        "min_value": "AC",
+        "max_value": "TO"
+      }
+    ]
+  },
+  {
+    "file_name": "olist_geolocation_dataset.csv",
+    "entity_name": "geolocation",
+    "row_count": 1000163,
+    "columns": [
+      {
+        "name": "geolocation_zip_code_prefix",
+        "null_count": 0,
+        "non_null_count": 1000163,
+        "inferred_type": "integer",
+        "redshift_raw_type": "varchar(16)",
+        "sample_values": [
+          "01037",
+          "01046",
+          "01041"
+        ],
+        "min_value": "01001",
+        "max_value": "99990"
+      },
+      {
+        "name": "geolocation_lat",
+        "null_count": 0,
+        "non_null_count": 1000163,
+        "inferred_type": "decimal",
+        "redshift_raw_type": "decimal(18, 14)",
+        "sample_values": [
+          "-23.54562128115268",
+          "-23.546081127035535",
+          "-23.54612896641469"
+        ],
+        "min_value": "-0.00004367379244740171",
+        "max_value": "45.06593318269697"
+      },
+      {
+        "name": "geolocation_lng",
+        "null_count": 0,
+        "non_null_count": 1000163,
+        "inferred_type": "decimal",
+        "redshift_raw_type": "decimal(18, 14)",
+        "sample_values": [
+          "-46.63929204800168",
+          "-46.64482029837157",
+          "-46.64295148361138"
+        ],
+        "min_value": "-101.46676644931476",
+        "max_value": "9.341527629906514"
+      },
+      {
+        "name": "geolocation_city",
+        "null_count": 0,
+        "non_null_count": 1000163,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "sao paulo",
+          "s\u00e3o paulo",
+          "sao bernardo do campo"
+        ],
+        "min_value": "* cidade",
+        "max_value": "\u00f3leo"
+      },
+      {
+        "name": "geolocation_state",
+        "null_count": 0,
+        "non_null_count": 1000163,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "SP",
+          "RN",
+          "AC"
+        ],
+        "min_value": "AC",
+        "max_value": "TO"
+      }
+    ]
+  },
+  {
+    "file_name": "olist_order_items_dataset.csv",
+    "entity_name": "order_items",
+    "row_count": 112650,
+    "columns": [
+      {
+        "name": "order_id",
+        "null_count": 0,
+        "non_null_count": 112650,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "00010242fe8c5a6d1ba2dd792cb16214",
+          "00018f77f2f0320c557190d7a144bdd3",
+          "000229ec398224ef6ca0657da4fc703e"
+        ],
+        "min_value": "00010242fe8c5a6d1ba2dd792cb16214",
+        "max_value": "fffe41c64501cc87c801fd61db3f6244"
+      },
+      {
+        "name": "order_item_id",
+        "null_count": 0,
+        "non_null_count": 112650,
+        "inferred_type": "integer",
+        "redshift_raw_type": "integer",
+        "sample_values": [
+          "1",
+          "2",
+          "3"
+        ],
+        "min_value": "1",
+        "max_value": "9"
+      },
+      {
+        "name": "product_id",
+        "null_count": 0,
+        "non_null_count": 112650,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "4244733e06e7ecb4970a6e2683c13e61",
+          "e5f2d52b802189ee658865ca93d83a8f",
+          "c777355d18b72b67abbeef9df44fd0fd"
+        ],
+        "min_value": "00066f42aeeb9f3007548bb9d3f33c38",
+        "max_value": "fffe9eeff12fcbd74a2f2b007dde0c58"
+      },
+      {
+        "name": "seller_id",
+        "null_count": 0,
+        "non_null_count": 112650,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "48436dade18ac8b2bce089ec2a041202",
+          "dd7ddc04e1b6c2c614352b383efe2d36",
+          "5b51032eddd242adc84c38acab88f23d"
+        ],
+        "min_value": "0015a82c2db000af6aaaf3ae2ecb0532",
+        "max_value": "ffff564a4f9085cd26170f4732393726"
+      },
+      {
+        "name": "shipping_limit_date",
+        "null_count": 0,
+        "non_null_count": 112650,
+        "inferred_type": "timestamp",
+        "redshift_raw_type": "timestamp",
+        "sample_values": [
+          "2017-09-19 09:45:35",
+          "2017-05-03 11:05:13",
+          "2018-01-18 14:48:30"
+        ],
+        "min_value": "2016-09-19 00:15:34",
+        "max_value": "2020-04-09 22:35:08"
+      },
+      {
+        "name": "price",
+        "null_count": 0,
+        "non_null_count": 112650,
+        "inferred_type": "decimal",
+        "redshift_raw_type": "decimal(18, 2)",
+        "sample_values": [
+          "58.90",
+          "239.90",
+          "199.00"
+        ],
+        "min_value": "0.85",
+        "max_value": "999.99"
+      },
+      {
+        "name": "freight_value",
+        "null_count": 0,
+        "non_null_count": 112650,
+        "inferred_type": "decimal",
+        "redshift_raw_type": "decimal(18, 2)",
+        "sample_values": [
+          "13.29",
+          "19.93",
+          "17.87"
+        ],
+        "min_value": "0.00",
+        "max_value": "99.97"
+      }
+    ]
+  },
+  {
+    "file_name": "olist_order_payments_dataset.csv",
+    "entity_name": "order_payments",
+    "row_count": 103886,
+    "columns": [
+      {
+        "name": "order_id",
+        "null_count": 0,
+        "non_null_count": 103886,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "b81ef226f3fe1789b1e8b2acac839d17",
+          "a9810da82917af2d9aefd1278f1dcfa0",
+          "25e8ea4e93396b6fa0d3dd708e76c1bd"
+        ],
+        "min_value": "00010242fe8c5a6d1ba2dd792cb16214",
+        "max_value": "fffe41c64501cc87c801fd61db3f6244"
+      },
+      {
+        "name": "payment_sequential",
+        "null_count": 0,
+        "non_null_count": 103886,
+        "inferred_type": "integer",
+        "redshift_raw_type": "integer",
+        "sample_values": [
+          "1",
+          "2",
+          "4"
+        ],
+        "min_value": "1",
+        "max_value": "9"
+      },
+      {
+        "name": "payment_type",
+        "null_count": 0,
+        "non_null_count": 103886,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "credit_card",
+          "boleto",
+          "voucher"
+        ],
+        "min_value": "boleto",
+        "max_value": "voucher"
+      },
+      {
+        "name": "payment_installments",
+        "null_count": 0,
+        "non_null_count": 103886,
+        "inferred_type": "integer",
+        "redshift_raw_type": "integer",
+        "sample_values": [
+          "8",
+          "1",
+          "2"
+        ],
+        "min_value": "0",
+        "max_value": "9"
+      },
+      {
+        "name": "payment_value",
+        "null_count": 0,
+        "non_null_count": 103886,
+        "inferred_type": "decimal",
+        "redshift_raw_type": "decimal(18, 2)",
+        "sample_values": [
+          "99.33",
+          "24.39",
+          "65.71"
+        ],
+        "min_value": "0.00",
+        "max_value": "999.68"
+      }
+    ]
+  },
+  {
+    "file_name": "olist_order_reviews_dataset.csv",
+    "entity_name": "order_reviews",
+    "row_count": 99224,
+    "columns": [
+      {
+        "name": "review_id",
+        "null_count": 0,
+        "non_null_count": 99224,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "7bc2406110b926393aa56f80a40eba40",
+          "80e641a11e56f04c1ad469d5645fdfde",
+          "228ce5500dc1d8e020d8d1322874b6f0"
+        ],
+        "min_value": "0001239bc1de2e33cb583967c2ca4c67",
+        "max_value": "fffefe7a48d22f7b32046421062219d1"
+      },
+      {
+        "name": "order_id",
+        "null_count": 0,
+        "non_null_count": 99224,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "73fc7af87114b39712e6da79b0a377eb",
+          "a548910a1c6147796b98fdf73dbeba33",
+          "f9e4b658b201a9f2ecdecbb34bed034b"
+        ],
+        "min_value": "00010242fe8c5a6d1ba2dd792cb16214",
+        "max_value": "fffe41c64501cc87c801fd61db3f6244"
+      },
+      {
+        "name": "review_score",
+        "null_count": 0,
+        "non_null_count": 99224,
+        "inferred_type": "integer",
+        "redshift_raw_type": "integer",
+        "sample_values": [
+          "4",
+          "5",
+          "1"
+        ],
+        "min_value": "1",
+        "max_value": "5"
+      },
+      {
+        "name": "review_comment_title",
+        "null_count": 87656,
+        "non_null_count": 11568,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(1024)",
+        "sample_values": [
+          "recomendo",
+          "Super recomendo",
+          "N\u00e3o chegou meu produto"
+        ],
+        "min_value": "",
+        "max_value": "\ud83d\udd1f"
+      },
+      {
+        "name": "review_comment_message",
+        "null_count": 58247,
+        "non_null_count": 40977,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(65535)",
+        "sample_values": [
+          "Recebi bem antes do prazo estipulado.",
+          "Parab\u00e9ns lojas lannister adorei comprar pela Internet seguro e pr\u00e1tico Parab\u00e9ns a todos feliz P\u00e1scoa",
+          "aparelho eficiente. no site a marca do aparelho esta impresso como 3desinfector e ao chegar esta com outro nome...atualizar com a marca correta uma vez que \u00e9 o mesmo aparelho"
+        ],
+        "min_value": "",
+        "max_value": "\ud83d\ude21\ud83d\ude21\ud83d\ude21\ud83d\ude21\ud83d\ude21\ud83d\udc4e\ud83d\udc4e\ud83d\udc4e\ud83d\udc4e\ud83d\udc4e\r\nEmpresa sem compromisso com o cliente"
+      },
+      {
+        "name": "review_creation_date",
+        "null_count": 0,
+        "non_null_count": 99224,
+        "inferred_type": "timestamp",
+        "redshift_raw_type": "timestamp",
+        "sample_values": [
+          "2018-01-18 00:00:00",
+          "2018-03-10 00:00:00",
+          "2018-02-17 00:00:00"
+        ],
+        "min_value": "2016-10-02 00:00:00",
+        "max_value": "2018-08-31 00:00:00"
+      },
+      {
+        "name": "review_answer_timestamp",
+        "null_count": 0,
+        "non_null_count": 99224,
+        "inferred_type": "timestamp",
+        "redshift_raw_type": "timestamp",
+        "sample_values": [
+          "2018-01-18 21:46:59",
+          "2018-03-11 03:05:13",
+          "2018-02-18 14:36:24"
+        ],
+        "min_value": "2016-10-07 18:32:28",
+        "max_value": "2018-10-29 12:27:35"
+      }
+    ]
+  },
+  {
+    "file_name": "olist_orders_dataset.csv",
+    "entity_name": "orders",
+    "row_count": 99441,
+    "columns": [
+      {
+        "name": "order_id",
+        "null_count": 0,
+        "non_null_count": 99441,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "e481f51cbdc54678b7cc49136f2d6af7",
+          "53cdb2fc8bc7dce0b6741e2150273451",
+          "47770eb9100c2d0c44946d9cf07ec65d"
+        ],
+        "min_value": "00010242fe8c5a6d1ba2dd792cb16214",
+        "max_value": "fffe41c64501cc87c801fd61db3f6244"
+      },
+      {
+        "name": "customer_id",
+        "null_count": 0,
+        "non_null_count": 99441,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "9ef432eb6251297304e76186b10a928d",
+          "b0830fb4747a6c6d20dea0b8c802d7ef",
+          "41ce2a54c0b03bf3443c3d931a367089"
+        ],
+        "min_value": "00012a2ce6f8dcda20d059ce98491703",
+        "max_value": "ffffe8b65bbe3087b653a978c870db99"
+      },
+      {
+        "name": "order_status",
+        "null_count": 0,
+        "non_null_count": 99441,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "delivered",
+          "invoiced",
+          "shipped"
+        ],
+        "min_value": "approved",
+        "max_value": "unavailable"
+      },
+      {
+        "name": "order_purchase_timestamp",
+        "null_count": 0,
+        "non_null_count": 99441,
+        "inferred_type": "timestamp",
+        "redshift_raw_type": "timestamp",
+        "sample_values": [
+          "2017-10-02 10:56:33",
+          "2018-07-24 20:41:37",
+          "2018-08-08 08:38:49"
+        ],
+        "min_value": "2016-09-04 21:15:19",
+        "max_value": "2018-10-17 17:30:18"
+      },
+      {
+        "name": "order_approved_at",
+        "null_count": 160,
+        "non_null_count": 99281,
+        "inferred_type": "timestamp",
+        "redshift_raw_type": "timestamp",
+        "sample_values": [
+          "2017-10-02 11:07:15",
+          "2018-07-26 03:24:27",
+          "2018-08-08 08:55:23"
+        ],
+        "min_value": "2016-09-15 12:16:38",
+        "max_value": "2018-09-03 17:40:06"
+      },
+      {
+        "name": "order_delivered_carrier_date",
+        "null_count": 1783,
+        "non_null_count": 97658,
+        "inferred_type": "timestamp",
+        "redshift_raw_type": "timestamp",
+        "sample_values": [
+          "2017-10-04 19:55:00",
+          "2018-07-26 14:31:00",
+          "2018-08-08 13:50:00"
+        ],
+        "min_value": "2016-10-08 10:34:01",
+        "max_value": "2018-09-11 19:48:28"
+      },
+      {
+        "name": "order_delivered_customer_date",
+        "null_count": 2965,
+        "non_null_count": 96476,
+        "inferred_type": "timestamp",
+        "redshift_raw_type": "timestamp",
+        "sample_values": [
+          "2017-10-10 21:25:13",
+          "2018-08-07 15:27:45",
+          "2018-08-17 18:06:29"
+        ],
+        "min_value": "2016-10-11 13:46:32",
+        "max_value": "2018-10-17 13:22:46"
+      },
+      {
+        "name": "order_estimated_delivery_date",
+        "null_count": 0,
+        "non_null_count": 99441,
+        "inferred_type": "timestamp",
+        "redshift_raw_type": "timestamp",
+        "sample_values": [
+          "2017-10-18 00:00:00",
+          "2018-08-13 00:00:00",
+          "2018-09-04 00:00:00"
+        ],
+        "min_value": "2016-09-30 00:00:00",
+        "max_value": "2018-11-12 00:00:00"
+      }
+    ]
+  },
+  {
+    "file_name": "olist_products_dataset.csv",
+    "entity_name": "products",
+    "row_count": 32951,
+    "columns": [
+      {
+        "name": "product_id",
+        "null_count": 0,
+        "non_null_count": 32951,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "1e9e8ef04dbcff4541ed26657ea517e5",
+          "3aa071139cb16b67ca9e5dea641aaa2f",
+          "96bd76ec8810374ed1b65e291975717f"
+        ],
+        "min_value": "00066f42aeeb9f3007548bb9d3f33c38",
+        "max_value": "fffe9eeff12fcbd74a2f2b007dde0c58"
+      },
+      {
+        "name": "product_category_name",
+        "null_count": 610,
+        "non_null_count": 32341,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "perfumaria",
+          "artes",
+          "esporte_lazer"
+        ],
+        "min_value": "agro_industria_e_comercio",
+        "max_value": "utilidades_domesticas"
+      },
+      {
+        "name": "product_name_lenght",
+        "null_count": 610,
+        "non_null_count": 32341,
+        "inferred_type": "integer",
+        "redshift_raw_type": "integer",
+        "sample_values": [
+          "40",
+          "44",
+          "46"
+        ],
+        "min_value": "10",
+        "max_value": "9"
+      },
+      {
+        "name": "product_description_lenght",
+        "null_count": 610,
+        "non_null_count": 32341,
+        "inferred_type": "integer",
+        "redshift_raw_type": "integer",
+        "sample_values": [
+          "287",
+          "276",
+          "250"
+        ],
+        "min_value": "100",
+        "max_value": "999"
+      },
+      {
+        "name": "product_photos_qty",
+        "null_count": 610,
+        "non_null_count": 32341,
+        "inferred_type": "integer",
+        "redshift_raw_type": "integer",
+        "sample_values": [
+          "1",
+          "4",
+          "2"
+        ],
+        "min_value": "1",
+        "max_value": "9"
+      },
+      {
+        "name": "product_weight_g",
+        "null_count": 2,
+        "non_null_count": 32949,
+        "inferred_type": "integer",
+        "redshift_raw_type": "integer",
+        "sample_values": [
+          "225",
+          "1000",
+          "154"
+        ],
+        "min_value": "0",
+        "max_value": "998"
+      },
+      {
+        "name": "product_length_cm",
+        "null_count": 2,
+        "non_null_count": 32949,
+        "inferred_type": "integer",
+        "redshift_raw_type": "integer",
+        "sample_values": [
+          "16",
+          "30",
+          "18"
+        ],
+        "min_value": "10",
+        "max_value": "99"
+      },
+      {
+        "name": "product_height_cm",
+        "null_count": 2,
+        "non_null_count": 32949,
+        "inferred_type": "integer",
+        "redshift_raw_type": "integer",
+        "sample_values": [
+          "10",
+          "18",
+          "9"
+        ],
+        "min_value": "10",
+        "max_value": "99"
+      },
+      {
+        "name": "product_width_cm",
+        "null_count": 2,
+        "non_null_count": 32949,
+        "inferred_type": "integer",
+        "redshift_raw_type": "integer",
+        "sample_values": [
+          "14",
+          "20",
+          "15"
+        ],
+        "min_value": "10",
+        "max_value": "98"
+      }
+    ]
+  },
+  {
+    "file_name": "olist_sellers_dataset.csv",
+    "entity_name": "sellers",
+    "row_count": 3095,
+    "columns": [
+      {
+        "name": "seller_id",
+        "null_count": 0,
+        "non_null_count": 3095,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "3442f8959a84dea7ee197c632cb2df15",
+          "d1b65fc7debc3361ea86b5f14c68d2e2",
+          "ce3ad9de960102d0677a81f5d0bb7b2d"
+        ],
+        "min_value": "0015a82c2db000af6aaaf3ae2ecb0532",
+        "max_value": "ffff564a4f9085cd26170f4732393726"
+      },
+      {
+        "name": "seller_zip_code_prefix",
+        "null_count": 0,
+        "non_null_count": 3095,
+        "inferred_type": "integer",
+        "redshift_raw_type": "varchar(16)",
+        "sample_values": [
+          "13023",
+          "13844",
+          "20031"
+        ],
+        "min_value": "01001",
+        "max_value": "99730"
+      },
+      {
+        "name": "seller_city",
+        "null_count": 0,
+        "non_null_count": 3095,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "campinas",
+          "mogi guacu",
+          "rio de janeiro"
+        ],
+        "min_value": "04482255",
+        "max_value": "xaxim"
+      },
+      {
+        "name": "seller_state",
+        "null_count": 0,
+        "non_null_count": 3095,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "SP",
+          "RJ",
+          "PE"
+        ],
+        "min_value": "AC",
+        "max_value": "SP"
+      }
+    ]
+  },
+  {
+    "file_name": "product_category_name_translation.csv",
+    "entity_name": "product_category_translation",
+    "row_count": 71,
+    "columns": [
+      {
+        "name": "\ufeffproduct_category_name",
+        "null_count": 0,
+        "non_null_count": 71,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "beleza_saude",
+          "informatica_acessorios",
+          "automotivo"
+        ],
+        "min_value": "agro_industria_e_comercio",
+        "max_value": "utilidades_domesticas"
+      },
+      {
+        "name": "product_category_name_english",
+        "null_count": 0,
+        "non_null_count": 71,
+        "inferred_type": "varchar",
+        "redshift_raw_type": "varchar(256)",
+        "sample_values": [
+          "health_beauty",
+          "computers_accessories",
+          "auto"
+        ],
+        "min_value": "agro_industry_and_commerce",
+        "max_value": "watches_gifts"
+      }
+    ]
+  }
+]

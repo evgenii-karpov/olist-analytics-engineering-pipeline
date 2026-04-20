@@ -50,6 +50,8 @@ docs/
   architecture.md       End-to-end architecture and operational design.
   data_model.md         Dimensional model, grains, SCD2 strategy, marts.
   implementation_plan.md Phased delivery roadmap.
+  source_contract.md    Generated source schema contract and row counts.
+  source_profile.json   Machine-readable generated source profile.
 
 infra/
   redshift/             Redshift DDL and admin SQL.
@@ -111,5 +113,5 @@ business:
 
 ## Current Status
 
-Planning docs and repository skeleton are in place. Implementation starts with
-the ingestion layer and AWS/Redshift setup.
+Planning docs, repository skeleton, and source profiling are in place.
+Implementation continues with the ingestion layer and AWS/Redshift setup.

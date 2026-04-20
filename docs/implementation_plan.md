@@ -14,6 +14,8 @@ Deliverables:
 
 ## Phase 1: Local Dataset Profiling
 
+Status: complete.
+
 Goal:
 
 Understand the local Olist files before writing ingestion and warehouse DDL.
@@ -28,7 +30,16 @@ Deliverables:
 Output candidates:
 
 - `docs/source_contract.md`
+- `docs/source_profile.json`
 - `scripts/utilities/profile_olist_zip.py`
+
+Notes:
+
+- Source profiling reads `olist.zip` directly without extracting the archive.
+- Zip-code fields are intentionally typed as `varchar` in the raw contract to
+  preserve leading zeroes.
+- Long review text fields use wider Redshift `varchar` types to avoid
+  truncation.
 
 ## Phase 2: Python Ingestion To S3
 
