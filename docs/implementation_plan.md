@@ -43,7 +43,7 @@ Notes:
 
 ## Phase 2: Python Ingestion To S3
 
-Status: in progress.
+Status: complete.
 
 Goal:
 
@@ -183,19 +183,31 @@ Deliverables:
 
 ## Phase 7: SCD2 Snapshots
 
+Status: complete.
+
 Goal:
 
 Demonstrate Type 2 history with dbt snapshots.
 
 Deliverables:
 
-- Generated correction feeds.
-- Intermediate current-attribute models.
-- `snap_customers`
-- `snap_products`
-- `dim_customer_scd2`
-- `dim_product_scd2`
-- Tests for overlapping SCD2 windows and current rows.
+- Generated correction feeds. Complete.
+- Raw correction tables. Complete.
+- Staging correction models. Complete.
+- Intermediate current-attribute models. Complete.
+- `snap_customers`. Complete.
+- `snap_products`. Complete.
+- `dim_customer_scd2`. Complete.
+- `dim_product_scd2`. Complete.
+- Tests for overlapping SCD2 windows and current rows. Complete.
+
+Notes:
+
+- Correction feeds simulate production master-data updates over a static Kaggle
+  dataset.
+- Intermediate models use the dbt `batch_date` variable to expose only
+  corrections that should be visible in a given batch.
+- dbt snapshots track customer and product changes using the `check` strategy.
 
 ## Phase 8: Core Star Schema
 

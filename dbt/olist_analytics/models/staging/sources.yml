@@ -90,3 +90,21 @@ sources:
             tests:
               - not_null
               - unique
+      - name: customer_profile_changes
+        description: Generated customer profile corrections for SCD2 simulation.
+        columns:
+          - name: customer_unique_id
+            tests:
+              - not_null
+          - name: effective_at
+            tests:
+              - not_null
+      - name: product_attribute_changes
+        description: Generated product attribute corrections for SCD2 simulation.
+        columns:
+          - name: product_id
+            tests:
+              - not_null
+          - name: effective_at
+            tests:
+              - not_null

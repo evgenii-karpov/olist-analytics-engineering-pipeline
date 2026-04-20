@@ -20,6 +20,7 @@ Then set Redshift environment variables from the root `.env.example`.
 dbt debug
 dbt parse
 dbt source freshness
+dbt snapshot --vars '{batch_date: "2018-09-01"}'
 dbt build --select staging
 ```
 

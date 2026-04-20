@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: int_customer_current_attributes
+    description: Customer attributes visible as of the current dbt batch date.
+    columns:
+      - name: customer_unique_id
+        tests:
+          - not_null
+          - unique
+  - name: int_product_current_attributes
+    description: Product attributes visible as of the current dbt batch date.
+    columns:
+      - name: product_id
+        tests:
+          - not_null
+          - unique

@@ -8,6 +8,7 @@ The first DAG is a skeleton that captures the intended production flow:
 ```text
 validate_source_contract
   -> upload_raw_files_to_s3
+  -> generate_and_upload_correction_feeds
   -> copy_raw_files_to_redshift
   -> dbt_snapshot
   -> dbt_build

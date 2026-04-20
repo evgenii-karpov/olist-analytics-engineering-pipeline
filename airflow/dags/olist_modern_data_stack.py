@@ -32,7 +32,11 @@ def required_env(name: str) -> str:
 
 def load_entities() -> list[str]:
     profile = json.loads(SOURCE_PROFILE_PATH.read_text(encoding="utf-8"))
-    return [entity["entity_name"] for entity in profile]
+    correction_entities = [
+        "customer_profile_changes",
+        "product_attribute_changes",
+    ]
+    return [entity["entity_name"] for entity in profile] + correction_entities
 
 
 def copy_raw_files_to_redshift(**context) -> None:
@@ -191,6 +195,28 @@ with DAG(
         },
     )
 
+    generate_and_upload_correction_feeds = BashOperator(
+        task_id="generate_and_upload_correction_feeds",
+        cwd=str(PROJECT_ROOT),
+        bash_command=(
+            f"{PYTHON_BIN} scripts/ingestion/generate_correction_feeds.py "
+            "--archive olist.zip "
+            "--output-dir data/prepared/{{{{ ds_nodash }}}} "
+            "--batch-date '{{{{ params.batch_date }}}}' "
+            "--run-id '{{{{ run_id }}}}' "
+            '--s3-bucket "$OLIST_S3_BUCKET" '
+            '--s3-prefix "$OLIST_S3_PREFIX" '
+            "--upload"
+        ),
+        env={
+            **os.environ,
+            "AWS_PROFILE": os.environ.get("AWS_PROFILE", "default"),
+            "AWS_REGION": os.environ.get("AWS_REGION", "us-east-1"),
+            "OLIST_S3_BUCKET": os.environ.get("OLIST_S3_BUCKET", ""),
+            "OLIST_S3_PREFIX": os.environ.get("OLIST_S3_PREFIX", "olist"),
+        },
+    )
+
     copy_raw_files = PythonOperator(
         task_id="copy_raw_files_to_redshift",
         python_callable=copy_raw_files_to_redshift,
@@ -235,6 +261,7 @@ with DAG(
         start
         >> validate_source_contract
         >> upload_raw_files_to_s3
+        >> generate_and_upload_correction_feeds
         >> copy_raw_files
         >> dbt_snapshot
         >> dbt_build

@@ -159,3 +159,43 @@ models:
       - name: product_category_name_english
         tests:
           - not_null
+  - name: stg_customer_profile_changes
+    description: Generated customer profile correction feed for SCD2 simulation.
+    tests:
+      - unique_combination_of_columns:
+          combination_of_columns:
+            - customer_unique_id
+            - effective_at
+    columns:
+      - name: customer_unique_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_unique_id
+      - name: effective_at
+        tests:
+          - not_null
+      - name: customer_state
+        tests:
+          - not_null
+  - name: stg_product_attribute_changes
+    description: Generated product attribute correction feed for SCD2 simulation.
+    tests:
+      - unique_combination_of_columns:
+          combination_of_columns:
+            - product_id
+            - effective_at
+    columns:
+      - name: product_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_products')
+              field: product_id
+      - name: effective_at
+        tests:
+          - not_null
+      - name: product_category_name
+        tests:
+          - not_null

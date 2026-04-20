@@ -100,6 +100,12 @@ Prepare and upload to S3 after AWS credentials are configured:
 python scripts\ingestion\ingest_olist_to_s3.py --batch-date 2018-09-01 --run-id manual_2018_09_01 --s3-bucket <bucket> --s3-prefix olist --upload
 ```
 
+Generate correction feeds for SCD2 simulation:
+
+```powershell
+python scripts\ingestion\generate_correction_feeds.py --batch-date 2018-09-01 --run-id manual_2018_09_01
+```
+
 Parse the dbt project after installing requirements and configuring a profile:
 
 ```powershell
