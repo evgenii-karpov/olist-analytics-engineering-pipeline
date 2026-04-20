@@ -33,16 +33,18 @@ models:
     description: Clean order item records.
     tests:
       - unique_combination_of_columns:
-          combination_of_columns:
-            - order_id
-            - order_item_id
+          arguments:
+            combination_of_columns:
+              - order_id
+              - order_item_id
     columns:
       - name: order_id
         tests:
           - not_null
           - relationships:
-              to: ref('stg_orders')
-              field: order_id
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
       - name: order_item_id
         tests:
           - not_null
@@ -50,14 +52,16 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('stg_products')
-              field: product_id
+              arguments:
+                to: ref('stg_products')
+                field: product_id
       - name: seller_id
         tests:
           - not_null
           - relationships:
-              to: ref('stg_sellers')
-              field: seller_id
+              arguments:
+                to: ref('stg_sellers')
+                field: seller_id
       - name: price
         tests:
           - not_null
@@ -70,21 +74,24 @@ models:
     description: Clean order payment records.
     tests:
       - unique_combination_of_columns:
-          combination_of_columns:
-            - order_id
-            - payment_sequential
+          arguments:
+            combination_of_columns:
+              - order_id
+              - payment_sequential
     columns:
       - name: order_id
         tests:
           - not_null
           - relationships:
-              to: ref('stg_orders')
-              field: order_id
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
       - name: payment_type
         tests:
           - not_null
           - accepted_values:
-              values: ['boleto', 'credit_card', 'debit_card', 'voucher', 'not_defined']
+              arguments:
+                values: ['boleto', 'credit_card', 'debit_card', 'voucher', 'not_defined']
       - name: payment_installments
         tests:
           - not_null
@@ -103,14 +110,16 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('stg_orders')
-              field: order_id
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
       - name: review_score
         tests:
           - not_null
           - accepted_values:
-              values: [1, 2, 3, 4, 5]
-              quote: false
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false
   - name: stg_orders
     description: Clean order records.
     columns:
@@ -122,13 +131,15 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('stg_customers')
-              field: customer_id
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
       - name: order_status
         tests:
           - not_null
           - accepted_values:
-              values: ['approved', 'canceled', 'created', 'delivered', 'invoiced', 'processing', 'shipped', 'unavailable']
+              arguments:
+                values: ['approved', 'canceled', 'created', 'delivered', 'invoiced', 'processing', 'shipped', 'unavailable']
       - name: order_purchase_timestamp
         tests:
           - not_null
@@ -163,16 +174,18 @@ models:
     description: Generated customer profile correction feed for SCD2 simulation.
     tests:
       - unique_combination_of_columns:
-          combination_of_columns:
-            - customer_unique_id
-            - effective_at
+          arguments:
+            combination_of_columns:
+              - customer_unique_id
+              - effective_at
     columns:
       - name: customer_unique_id
         tests:
           - not_null
           - relationships:
-              to: ref('stg_customers')
-              field: customer_unique_id
+              arguments:
+                to: ref('stg_customers')
+                field: customer_unique_id
       - name: effective_at
         tests:
           - not_null
@@ -183,16 +196,18 @@ models:
     description: Generated product attribute correction feed for SCD2 simulation.
     tests:
       - unique_combination_of_columns:
-          combination_of_columns:
-            - product_id
-            - effective_at
+          arguments:
+            combination_of_columns:
+              - product_id
+              - effective_at
     columns:
       - name: product_id
         tests:
           - not_null
           - relationships:
-              to: ref('stg_products')
-              field: product_id
+              arguments:
+                to: ref('stg_products')
+                field: product_id
       - name: effective_at
         tests:
           - not_null
