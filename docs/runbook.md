@@ -35,7 +35,8 @@ copy .env.example .env
 ```
 
 Keep `.env` private. It is ignored by git and is loaded into the Airflow
-container at startup without exposing secret values through Compose config.
+container at startup without exposing secrets or infrastructure identifiers
+through Compose config.
 
 For local dbt commands:
 

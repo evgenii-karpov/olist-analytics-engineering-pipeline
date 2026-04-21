@@ -22,16 +22,6 @@ services:
       OLIST_PROJECT_ROOT: /opt/airflow/project
       OLIST_PYTHON_BIN: python
       DBT_PROFILES_DIR: /opt/airflow/project/dbt/olist_analytics
-      AWS_PROFILE: ${AWS_PROFILE:-default}
-      AWS_REGION: ${AWS_REGION:-us-east-1}
-      AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
-      OLIST_S3_BUCKET: ${OLIST_S3_BUCKET:-}
-      OLIST_S3_PREFIX: ${OLIST_S3_PREFIX:-olist}
-      REDSHIFT_COPY_IAM_ROLE_ARN: ${REDSHIFT_COPY_IAM_ROLE_ARN:-}
-      REDSHIFT_HOST: ${REDSHIFT_HOST:-}
-      REDSHIFT_PORT: ${REDSHIFT_PORT:-5439}
-      REDSHIFT_DATABASE: ${REDSHIFT_DATABASE:-}
-      REDSHIFT_USER: ${REDSHIFT_USER:-}
     volumes:
       - ./:/opt/airflow/project
       - ./airflow/dags:/opt/airflow/dags
