@@ -79,6 +79,12 @@ dbt project:
 dbt/olist_analytics/
 ```
 
+Local Airflow Compose:
+
+```text
+compose.yaml
+```
+
 ## Local Commands
 
 Generate source profiling docs:
@@ -116,6 +122,13 @@ Parse the dbt project after installing requirements and configuring a profile:
 ```powershell
 cd dbt\olist_analytics
 dbt parse
+```
+
+Start local Airflow with SQLite:
+
+```powershell
+docker compose build
+docker compose up -d
 ```
 
 ## Main Design Decisions

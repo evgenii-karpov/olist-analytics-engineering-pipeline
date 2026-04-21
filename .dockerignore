@@ -1,0 +1,14 @@
+.git
+.venv
+data
+olist.zip
+airflow/logs
+airflow/plugins
+dbt/olist_analytics/logs
+dbt/olist_analytics/target
+dbt/olist_analytics/dbt_packages
+__pycache__
+*.pyc
+*.pyo
+.DS_Store
+Thumbs.db

@@ -3,6 +3,10 @@
 This folder contains the orchestration layer for the Olist Modern Data Stack
 project.
 
+The local Docker Compose setup runs Airflow in standalone mode with SQLite and
+`SequentialExecutor`. This is intentionally lightweight for a pet project and
+local DAG testing. It is not a production Airflow deployment.
+
 The first DAG is a skeleton that captures the intended production flow:
 
 ```text
@@ -35,6 +39,49 @@ REDSHIFT_PASSWORD
 
 `OLIST_PROJECT_ROOT` should point to the repository root. If it is not set, the
 DAG attempts to infer it from the local folder layout.
+
+## Local Docker Compose
+
+Build the local Airflow image:
+
+```powershell
+docker compose build
+```
+
+Start Airflow:
+
+```powershell
+docker compose up -d
+```
+
+Open:
+
+```text
+http://localhost:8080
+```
+
+Airflow standalone prints the generated admin password in container logs on the
+first startup:
+
+```powershell
+docker compose logs airflow
+```
+
+Stop Airflow:
+
+```powershell
+docker compose down
+```
+
+Reset the local Airflow SQLite metadata DB:
+
+```powershell
+docker compose down -v
+```
+
+SQLite/SequentialExecutor means Airflow runs tasks one at a time. That is fine
+for local validation, but the production-like AWS run can later move to Postgres
+and LocalExecutor or CeleryExecutor.
 
 ## Runtime Parameters
 

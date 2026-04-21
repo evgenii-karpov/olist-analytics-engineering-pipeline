@@ -1,0 +1,49 @@
+services:
+  airflow:
+    build:
+      context: .
+      dockerfile: docker/airflow/Dockerfile
+    image: olist-airflow:local
+    container_name: olist-airflow
+    restart: unless-stopped
+    command: standalone
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/local/airflow.db
+      AIRFLOW__WEBSERVER__SECRET_KEY: local_dev_only_secret_key
+      OLIST_PROJECT_ROOT: /opt/airflow/project
+      OLIST_PYTHON_BIN: python
+      DBT_PROFILES_DIR: /opt/airflow/project/dbt/olist_analytics
+      AWS_PROFILE: ${AWS_PROFILE:-default}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_DEFAULT_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+      OLIST_S3_BUCKET: ${OLIST_S3_BUCKET:-}
+      OLIST_S3_PREFIX: ${OLIST_S3_PREFIX:-olist}
+      REDSHIFT_COPY_IAM_ROLE_ARN: ${REDSHIFT_COPY_IAM_ROLE_ARN:-}
+      REDSHIFT_HOST: ${REDSHIFT_HOST:-}
+      REDSHIFT_PORT: ${REDSHIFT_PORT:-5439}
+      REDSHIFT_DATABASE: ${REDSHIFT_DATABASE:-}
+      REDSHIFT_USER: ${REDSHIFT_USER:-}
+      REDSHIFT_PASSWORD: ${REDSHIFT_PASSWORD:-}
+    volumes:
+      - ./:/opt/airflow/project
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - airflow_sqlite:/opt/airflow/local
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname \"$${HOSTNAME}\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  airflow_sqlite:
