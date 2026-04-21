@@ -1,4 +1,11 @@
 {
   "stubPath": "typings",
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": ["typings"]
+    }
+  ],
+  "reportMissingModuleSource": "none",
   "typeCheckingMode": "basic"
 }
