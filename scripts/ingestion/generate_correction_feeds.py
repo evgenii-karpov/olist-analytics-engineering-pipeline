@@ -11,62 +11,29 @@ from __future__ import annotations
 import argparse
 import csv
 import gzip
-from dataclasses import dataclass
-from datetime import UTC, datetime
+import sys
+from datetime import datetime
 from pathlib import Path
 from zipfile import ZipFile
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from scripts.ingestion.correction_specs import CORRECTION_FEEDS, CUSTOMER_FEED, PRODUCT_FEED, FeedSpec
+from scripts.ingestion.local_storage import render_manifest
+from scripts.ingestion.raw_files import (
+    METADATA_COLUMNS,
+    PreparedFile,
+    clean_entity_run_dirs,
+    raw_file_path,
+    raw_relative_path,
+    utc_now_string,
+)
+from scripts.ingestion.s3_storage import upload_files_to_s3
+
 
 SOURCE_SYSTEM = "olist_corrections"
-METADATA_COLUMNS = ["_batch_id", "_loaded_at", "_source_file", "_source_system"]
-
-
-@dataclass(frozen=True)
-class FeedSpec:
-    entity_name: str
-    file_name: str
-    headers: list[str]
-
-
-CUSTOMER_FEED = FeedSpec(
-    entity_name="customer_profile_changes",
-    file_name="customer_profile_changes.csv.gz",
-    headers=[
-        "customer_unique_id",
-        "effective_at",
-        "customer_zip_code_prefix",
-        "customer_city",
-        "customer_state",
-        "change_reason",
-    ],
-)
-
-PRODUCT_FEED = FeedSpec(
-    entity_name="product_attribute_changes",
-    file_name="product_attribute_changes.csv.gz",
-    headers=[
-        "product_id",
-        "effective_at",
-        "product_category_name",
-        "product_weight_g",
-        "product_length_cm",
-        "product_height_cm",
-        "product_width_cm",
-        "change_reason",
-    ],
-)
-
-
-@dataclass(frozen=True)
-class PreparedCorrectionFeed:
-    entity_name: str
-    local_path: Path
-    s3_key: str
-    row_count: int
-
-
-def utc_now_string() -> str:
-    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
 def read_unique_customers(zip_file: ZipFile, limit: int) -> list[dict[str, str]]:
@@ -170,10 +137,17 @@ def write_feed(
     output_dir: Path,
     feed: FeedSpec,
     rows: list[dict[str, str]],
-    batch_id: str,
+    batch_date: str,
+    run_id: str,
     loaded_at: str,
-) -> Path:
-    output_path = output_dir / "raw" / feed.entity_name / feed.file_name
+) -> PreparedFile:
+    output_path = raw_file_path(
+        output_dir,
+        feed.entity_name,
+        batch_date,
+        run_id,
+        feed.file_name,
+    )
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with gzip.open(output_path, mode="wt", encoding="utf-8", newline="") as output_file:
@@ -181,39 +155,25 @@ def write_feed(
         writer.writeheader()
         for row in rows:
             row = dict(row)
-            row["_batch_id"] = batch_id
+            row["_batch_id"] = run_id
             row["_loaded_at"] = loaded_at
             row["_source_file"] = feed.file_name
             row["_source_system"] = SOURCE_SYSTEM
             writer.writerow(row)
 
-    return output_path
-
-
-def s3_key_for(prefix: str, entity_name: str, batch_date: str, run_id: str, file_name: str) -> str:
-    normalized_prefix = prefix.strip("/")
-    return (
-        f"{normalized_prefix}/raw/{entity_name}/"
-        f"batch_date={batch_date}/run_id={run_id}/{file_name}"
+    return PreparedFile(
+        entity_name=feed.entity_name,
+        file_name=feed.file_name,
+        local_path=output_path,
+        relative_path=raw_relative_path(feed.entity_name, batch_date, run_id, feed.file_name),
+        row_count=len(rows),
     )
-
-
-def upload_to_s3(bucket: str, prepared_feeds: list[PreparedCorrectionFeed]) -> None:
-    try:
-        import boto3
-    except ImportError as exc:
-        raise RuntimeError("boto3 is required for S3 upload. Install project dependencies first.") from exc
-
-    s3_client = boto3.client("s3")
-    for prepared_feed in prepared_feeds:
-        s3_client.upload_file(str(prepared_feed.local_path), bucket, prepared_feed.s3_key)
-        print(f"Uploaded s3://{bucket}/{prepared_feed.s3_key}")
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--archive", default="olist.zip")
-    parser.add_argument("--output-dir", default="data/generated_corrections")
+    parser.add_argument("--output-dir", default="data/raw/olist")
     parser.add_argument("--batch-date", required=True)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--s3-bucket")
@@ -221,6 +181,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--upload", action="store_true")
     parser.add_argument("--customer-count", type=int, default=20)
     parser.add_argument("--product-count", type=int, default=20)
+    parser.add_argument("--no-clean", action="store_true")
     return parser.parse_args()
 
 
@@ -232,6 +193,14 @@ def main() -> None:
     if args.upload and not args.s3_bucket:
         raise ValueError("--s3-bucket is required when --upload is set")
 
+    if not args.no_clean:
+        clean_entity_run_dirs(
+            output_dir,
+            (feed.entity_name for feed in CORRECTION_FEEDS),
+            args.batch_date,
+            args.run_id,
+        )
+
     with ZipFile(args.archive) as zip_file:
         customer_rows = customer_corrections(
             read_unique_customers(zip_file, args.customer_count)
@@ -241,53 +210,43 @@ def main() -> None:
     customer_rows = filter_visible_corrections(customer_rows, args.batch_date)
     product_rows = filter_visible_corrections(product_rows, args.batch_date)
 
-    customer_path = write_feed(
-        output_dir,
-        CUSTOMER_FEED,
-        customer_rows,
-        args.run_id,
-        loaded_at,
-    )
-    product_path = write_feed(
-        output_dir,
-        PRODUCT_FEED,
-        product_rows,
-        args.run_id,
-        loaded_at,
-    )
-
     prepared_feeds = [
-        PreparedCorrectionFeed(
-            entity_name=CUSTOMER_FEED.entity_name,
-            local_path=customer_path,
-            s3_key=s3_key_for(
-                args.s3_prefix,
-                CUSTOMER_FEED.entity_name,
-                args.batch_date,
-                args.run_id,
-                CUSTOMER_FEED.file_name,
-            ),
-            row_count=len(customer_rows),
+        write_feed(
+            output_dir,
+            CUSTOMER_FEED,
+            customer_rows,
+            args.batch_date,
+            args.run_id,
+            loaded_at,
         ),
-        PreparedCorrectionFeed(
-            entity_name=PRODUCT_FEED.entity_name,
-            local_path=product_path,
-            s3_key=s3_key_for(
-                args.s3_prefix,
-                PRODUCT_FEED.entity_name,
-                args.batch_date,
-                args.run_id,
-                PRODUCT_FEED.file_name,
-            ),
-            row_count=len(product_rows),
+        write_feed(
+            output_dir,
+            PRODUCT_FEED,
+            product_rows,
+            args.batch_date,
+            args.run_id,
+            loaded_at,
         ),
     ]
 
-    print(f"Wrote {len(customer_rows)} customer corrections -> {customer_path}")
-    print(f"Wrote {len(product_rows)} product corrections -> {product_path}")
+    manifest_path = render_manifest(
+        prepared_feeds,
+        output_dir,
+        manifest_name="correction_manifest.json",
+        storage="s3" if args.upload else "local",
+        s3_bucket=args.s3_bucket,
+        s3_prefix=args.s3_prefix,
+    )
+    print(f"Wrote {manifest_path}")
+
+    for prepared_feed in prepared_feeds:
+        print(
+            f"Wrote {prepared_feed.row_count} {prepared_feed.entity_name} rows "
+            f"-> {prepared_feed.local_path}"
+        )
 
     if args.upload:
-        upload_to_s3(args.s3_bucket, prepared_feeds)
+        upload_files_to_s3(args.s3_bucket, args.s3_prefix, prepared_feeds)
 
 
 if __name__ == "__main__":

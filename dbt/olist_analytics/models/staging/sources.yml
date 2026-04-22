@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: olist_raw
-    description: Raw Olist source tables loaded from S3 into Redshift.
+    description: Raw Olist source tables loaded into the active warehouse target.
     database: "{{ target.database }}"
     schema: raw
     config:

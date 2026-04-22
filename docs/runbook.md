@@ -1,17 +1,16 @@
 # Runbook
 
-This runbook describes the intended first production-like end-to-end run.
+This runbook describes the local-first end-to-end run.
 
 ## Prerequisites
 
 - `olist.zip` exists in the repository root.
+- Docker Desktop is running.
 - Python virtual environment is created.
 - Python dependencies are installed.
 - dbt profile exists.
-- AWS credentials are configured locally.
-- S3 bucket exists.
-- Redshift cluster or serverless workgroup exists.
-- Redshift has an IAM role that can read the project S3 prefix.
+
+AWS credentials and Redshift access are not required for the default run.
 
 ## Local Setup
 
@@ -19,115 +18,95 @@ This runbook describes the intended first production-like end-to-end run.
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-```
-
-Copy the dbt profile example:
-
-```powershell
+copy .env.example .env
 copy dbt\olist_analytics\profiles.yml.example dbt\olist_analytics\profiles.yml
 ```
 
-For Docker Compose and Airflow, copy the environment template and fill it with
-your local AWS/Redshift values:
+Start PostgreSQL 18 and Airflow:
 
 ```powershell
-copy .env.example .env
+docker compose build
+docker compose up -d
 ```
 
-Keep `.env` private. It is ignored by git and is loaded into the Airflow
-container at startup without exposing secrets or infrastructure identifiers
-through Compose config.
-
-For local dbt commands:
-
-```powershell
-cd dbt\olist_analytics
-$env:DBT_PROFILES_DIR = (Get-Location).Path
-dbt parse --show-all-deprecations --no-partial-parse
-```
-
-## AWS Environment Variables
-
-Set these before an end-to-end run:
-
-```powershell
-$env:AWS_PROFILE = "<profile>"
-$env:AWS_REGION = "<region>"
-$env:OLIST_S3_BUCKET = "<bucket>"
-$env:OLIST_S3_PREFIX = "olist"
-$env:REDSHIFT_COPY_IAM_ROLE_ARN = "<role-arn>"
-$env:REDSHIFT_HOST = "<redshift-endpoint>"
-$env:REDSHIFT_PORT = "5439"
-$env:REDSHIFT_DATABASE = "<database>"
-$env:REDSHIFT_USER = "<user>"
-$env:REDSHIFT_PASSWORD = "<password>"
-```
-
-## Bootstrap Redshift
-
-Run these SQL files in order:
+PostgreSQL connection defaults:
 
 ```text
-infra/redshift/001_create_schemas.sql
-infra/redshift/002_create_raw_tables.sql
-infra/redshift/003_create_audit_tables.sql
-infra/redshift/005_create_correction_tables.sql
+host: localhost from the host machine, postgres from the Airflow container
+port: 5432
+database: olist_analytics
+user: olist
+password: olist
 ```
 
-`004_copy_raw_tables_template.sql` is a human-readable COPY template. The
-Airflow DAG performs the COPY commands programmatically.
+The Compose volume for PostgreSQL 18 is mounted at `/var/lib/postgresql`, with
+`PGDATA=/var/lib/postgresql/18/docker`.
 
 ## Manual Smoke Run Without Airflow
 
-Validate that the local archive still matches the committed source contract:
+Validate the archive:
 
 ```powershell
 python scripts\utilities\validate_source_contract.py
 ```
 
-Prepare and upload raw Olist files:
+Prepare raw files in the local raw zone:
 
 ```powershell
-python scripts\ingestion\ingest_olist_to_s3.py `
+python scripts\ingestion\prepare_olist_raw_files.py `
   --batch-date 2018-09-01 `
-  --run-id manual_2018_09_01 `
-  --s3-bucket $env:OLIST_S3_BUCKET `
-  --s3-prefix $env:OLIST_S3_PREFIX `
-  --upload
+  --run-id manual_2018_09_01
 ```
 
-Generate and upload correction feeds:
+Generate correction feeds:
 
 ```powershell
 python scripts\ingestion\generate_correction_feeds.py `
   --batch-date 2018-09-01 `
-  --run-id manual_2018_09_01 `
-  --s3-bucket $env:OLIST_S3_BUCKET `
-  --s3-prefix $env:OLIST_S3_PREFIX `
-  --upload
+  --run-id manual_2018_09_01
 ```
 
-Then run the Redshift COPY statements or use the Airflow DAG task.
+Bootstrap PostgreSQL schemas and load raw files:
 
-## dbt Execution Order
+```powershell
+python scripts\loading\load_raw_to_postgres.py `
+  --bootstrap-sql-dir infra/postgres `
+  --batch-date 2018-09-01 `
+  --run-id manual_2018_09_01
+```
 
-After raw tables are loaded:
+## dbt Execution
 
 ```powershell
 cd dbt\olist_analytics
 $env:DBT_PROFILES_DIR = (Get-Location).Path
+$env:DBT_TARGET = "local_pg"
+$env:POSTGRES_HOST = "localhost"
+$env:POSTGRES_PORT = "5432"
+$env:POSTGRES_DB = "olist_analytics"
+$env:POSTGRES_USER = "olist"
+$env:POSTGRES_PASSWORD = "olist"
 
+dbt debug
 dbt source freshness
+dbt run --select staging intermediate --vars '{batch_date: "2018-09-01"}'
 dbt snapshot --vars '{batch_date: "2018-09-01"}'
 dbt build --vars '{batch_date: "2018-09-01", lookback_days: 3}'
+dbt test --vars '{batch_date: "2018-09-01", lookback_days: 3}'
 ```
 
 ## Airflow Run
 
-The intended DAG is:
+Open Airflow:
 
 ```text
-olist_modern_data_stack
+http://localhost:8080
+```
+
+The local DAG is:
+
+```text
+olist_modern_data_stack_local
 ```
 
 Runtime params:
@@ -142,12 +121,20 @@ The DAG performs:
 
 ```text
 validate_source_contract
-upload_raw_files_to_s3
-generate_and_upload_correction_feeds
-copy_raw_files_to_redshift
+prepare_raw_files
+generate_correction_feeds
+load_raw_files_to_postgres
+dbt_run_snapshot_inputs
 dbt_snapshot
 dbt_build
 dbt_test
+```
+
+Airflow standalone prints the generated admin password in container logs on the
+first startup:
+
+```powershell
+docker compose logs airflow
 ```
 
 ## Quality Gates
@@ -155,16 +142,34 @@ dbt_test
 The run should fail if:
 
 - Source files are missing or headers change.
-- Redshift COPY fails.
+- PostgreSQL raw load fails.
 - dbt source freshness fails.
 - Staging/core/mart tests fail.
 - SCD2 dimensions have overlapping windows.
 - SCD2 dimensions have more than one current row per business key.
 
+## AWS / Redshift Path
+
+The AWS path is preserved but no longer default:
+
+- `airflow/dags/olist_modern_data_stack.py`
+- `infra/redshift/`
+- `infra/aws/`
+- `docs/aws_next_steps.md`
+
+Use the `redshift` dbt profile target and the preserved AWS DAG when Redshift
+access becomes available again.
+
 ## Cleanup
 
-For cost control:
+Stop containers:
 
-- Stop or pause Redshift compute when not in use.
-- Keep S3 data under one project prefix.
-- Remove experimental S3 prefixes after testing.
+```powershell
+docker compose down
+```
+
+Remove local PostgreSQL data:
+
+```powershell
+docker compose down -v
+```

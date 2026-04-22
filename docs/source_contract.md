@@ -179,7 +179,7 @@ Every raw table should include these ingestion metadata columns:
 | --- | --- | --- |
 | `_batch_id` | varchar(128) | Deterministic batch identifier. |
 | `_loaded_at` | timestamp | Warehouse load timestamp. |
-| `_source_file` | varchar(512) | Original S3 object or source file. |
+| `_source_file` | varchar(512) | Original raw object or source file. |
 | `_source_system` | varchar(64) | Source system name, initially `olist_kaggle`. |
 
 ## Contract Rules

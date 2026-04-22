@@ -24,7 +24,7 @@ Expected Olist files:
 
 ```text
 raw
-  raw source tables loaded from S3
+  raw source tables loaded from the local raw zone or S3-compatible path
 
 staging
   typed, cleaned views over raw tables

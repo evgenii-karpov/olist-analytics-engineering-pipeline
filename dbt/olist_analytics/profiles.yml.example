@@ -1,7 +1,18 @@
 olist_analytics:
-  target: dev
+  target: "{{ env_var('DBT_TARGET', 'local_pg') }}"
   outputs:
-    dev:
+    local_pg:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST', 'localhost') }}"
+      user: "{{ env_var('POSTGRES_USER', 'olist') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD', 'olist') }}"
+      port: "{{ env_var('POSTGRES_PORT', 5432) | as_number }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'olist_analytics') }}"
+      schema: analytics
+      threads: 4
+      connect_timeout: 10
+
+    redshift:
       type: redshift
       host: "{{ env_var('REDSHIFT_HOST') }}"
       user: "{{ env_var('REDSHIFT_USER') }}"

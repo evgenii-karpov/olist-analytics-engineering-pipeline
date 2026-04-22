@@ -3,34 +3,45 @@
 ## Elevator Pitch
 
 This project implements a production-like batch analytics platform for an
-e-commerce dataset using AWS S3, Amazon Redshift, Apache Airflow, and dbt.
+e-commerce dataset using Python, a local S3-shaped raw zone, PostgreSQL 18,
+Apache Airflow, and dbt.
 
-The pipeline lands raw source data in S3, loads it to Redshift with COPY,
-transforms it with dbt into staging, SCD2 dimensions, a core star schema, and
-business marts. Airflow orchestrates ingestion, warehouse loading, snapshots,
-dbt builds, tests, retries, and backfills.
+The first design targeted AWS S3 and Amazon Redshift. Because Redshift access
+was not available, the project was adapted into a fully reproducible local
+version while preserving the same architectural contracts: immutable raw files,
+warehouse raw tables, dbt transformations, SCD2 dimensions, incremental facts,
+and quality gates.
 
 ## What This Project Demonstrates
 
-- Cloud data lake landing pattern with S3.
-- Warehouse loading with Redshift COPY.
+- Local-first data warehouse development with Docker.
+- Storage contract abstraction: filesystem locally, S3 later.
+- Warehouse load pattern with idempotent raw loads and audit rows.
 - Orchestration with Airflow.
 - dbt project structure and layered modeling.
 - Source contracts and schema validation.
 - Dimensional modeling and star schema design.
 - SCD Type 2 dimensions with dbt snapshots.
 - Business-effective SCD2 joins from fact tables.
-- Incremental fact loading with a 3-day late-arriving data lookback.
-- Multi-grain modeling through order-level payment allocation to item-grain facts.
+- Incremental fact loading with a late-arriving data lookback.
+- Multi-grain modeling through order-level payment allocation to item-grain
+  facts.
 - Data quality gates across sources, staging, core, and marts.
-- Interview-ready trade-off discussions.
+- Trade-off discussion between local reproducibility and cloud-native services.
 
 ## Architecture Talking Points
 
-S3 is used as an immutable raw landing zone. Files are written with deterministic
-keys that include entity, `batch_date`, and `run_id`.
+The raw landing zone keeps deterministic paths:
 
-Redshift raw tables are append-only and include metadata columns:
+```text
+data/raw/olist/raw/<entity>/batch_date=<date>/run_id=<run_id>/<entity>.csv.gz
+```
+
+That shape intentionally mirrors S3 keys. In a cloud deployment the same logical
+contract can be backed by `s3://<bucket>/olist/raw/...`; locally it is backed by
+the filesystem.
+
+PostgreSQL raw tables are append-only and include metadata columns:
 
 ```text
 _batch_id
@@ -91,8 +102,8 @@ Examples:
 The correction generator only publishes changes visible as of the current
 `batch_date`. This makes historical backfills meaningful.
 
-dbt snapshots use the `check` strategy. The snapshot metadata is preserved, but
-the core SCD2 dimensions expose business-effective windows:
+dbt snapshots use the `check` strategy. The core SCD2 dimensions expose
+business-effective windows:
 
 ```text
 valid_from
@@ -101,10 +112,6 @@ is_current
 snapshot_valid_from
 snapshot_valid_to
 ```
-
-The dimensions include an initial baseline row from the source attributes, then
-use snapshot rows for changed states. This makes the demo robust even if the
-first warehouse run is executed at the final Olist batch date.
 
 The fact table joins to SCD2 dimensions using `order_purchase_timestamp` and the
 business-effective `valid_from` / `valid_to` window.
@@ -117,44 +124,26 @@ business-effective `valid_from` / `valid_to` window.
 lookback_days = 3
 ```
 
-Each incremental run reprocesses recent business dates. It also widens the
-window to include visible SCD2 correction effective dates, so historical facts
-get the correct customer/product surrogate keys after dimension corrections.
-
-## Data Quality Talking Points
-
-Data quality is enforced in layers:
-
-- Source tests check required keys.
-- Staging tests check uniqueness, relationships, accepted values, and
-  non-negative measures.
-- Core tests check surrogate keys and fact-to-dimension relationships.
-- SCD2 tests check current-row uniqueness and non-overlapping windows.
-- Mart tests validate revenue and ARPU calculations.
+The incremental model also widens its reprocessing boundary when generated
+correction feeds contain business-effective changes in the past.
 
 ## Trade-Offs
 
-CSV.GZ is used for the first version because it keeps Redshift COPY simple and
-easy to debug. Parquet could be added later for better compression and typed
-storage.
+PostgreSQL is not a Redshift replacement for distributed columnar performance,
+but it is a strong local warehouse stand-in for this project because it supports
+schemas, transactions, `COPY`, dbt, and a familiar SQL dialect.
 
-Raw tables are append-only. Deduplication and latest-record selection happen in
-dbt staging/intermediate models. This preserves load history and supports audit
-debugging.
+S3 is not required locally, but the project preserves the S3 path contract. That
+keeps the codebase easy to explain and leaves a clean route back to AWS.
 
-Seller is modeled as Type 1 in the first version to contrast with customer and
-product Type 2 dimensions.
-
-Marts are tables instead of incremental models because they are small aggregates
-in this dataset. This keeps the first version easier to validate.
+The AWS design is intentionally retained in `infra/redshift`, `infra/aws`, and
+the preserved AWS DAG. The main branch prioritizes reproducibility.
 
 ## Future Enhancements
 
-- Add PostgreSQL as an OLTP source.
-- Load Olist into PostgreSQL.
-- Add Apache NiFi with CDC from PostgreSQL to S3.
+- Add MinIO if a local S3-compatible object store becomes useful.
 - Add Metabase dashboards.
-- Add Terraform for AWS infrastructure.
 - Add CI for dbt parse/build checks.
-- Store raw prepared files as Parquet.
-- Add data observability tooling.
+- Store prepared raw files as Parquet.
+- Add Terraform for the AWS path.
+- Re-enable Redshift as an alternate deployment target when access is available.

@@ -25,7 +25,8 @@ Deliverables:
 - Inspect CSV columns and row counts.
 - Define source schema contract.
 - Define expected data types.
-- Decide entity names used consistently across S3, Redshift, and dbt.
+- Decide entity names used consistently across local raw paths, optional S3,
+  PostgreSQL, Redshift, and dbt.
 
 Output candidates:
 
@@ -38,29 +39,31 @@ Notes:
 - Source profiling reads `olist.zip` directly without extracting the archive.
 - Zip-code fields are intentionally typed as `varchar` in the raw contract to
   preserve leading zeroes.
-- Long review text fields use wider Redshift `varchar` types to avoid
+- Long review text fields use wider warehouse `varchar` types to avoid
   truncation.
 
-## Phase 2: Python Ingestion To S3
+## Phase 2: Python Ingestion To S3-Shaped Raw Zone
 
 Status: complete.
 
 Goal:
 
-Upload validated source files from `olist.zip` to the S3 raw zone.
+Write validated source files from `olist.zip` to the local raw zone while
+preserving S3-shaped paths. Optional S3 upload remains available for the AWS
+path.
 
 Deliverables:
 
 - Python ingestion script.
 - Source file validation. Complete.
-- Deterministic S3 keys. Complete.
+- Deterministic raw paths / S3 keys. Complete.
 - Gzip CSV output. Complete.
 - Metadata columns. Complete:
   - `_batch_id`
   - `_loaded_at`
   - `_source_file`
   - `_source_system`
-- Optional S3 upload with `boto3`. Implemented, not yet tested against AWS.
+- Optional S3 upload with `boto3`. Preserved for the AWS path.
 - Optional batch filtering by event date.
 - Initial correction feed generation for SCD2 simulation.
 
@@ -70,59 +73,68 @@ Key design:
 batch_date
 lookback_days
 run_id
-s3_bucket
-s3_prefix
+raw_dir
+s3_bucket / s3_prefix for optional AWS upload
 ```
 
-## Phase 3: AWS And Redshift Bootstrap
+## Phase 3: Local PostgreSQL Bootstrap
 
-Status: in progress.
+Status: complete.
 
 Goal:
 
-Prepare AWS resources and Redshift schemas.
+Prepare PostgreSQL schemas and raw tables for the local warehouse.
 
 Deliverables:
 
-- S3 bucket setup notes. Complete.
-- IAM role/policy notes for Redshift COPY. Complete.
-- Redshift schema creation SQL. Complete.
-- Raw table DDL. Complete.
-- Audit table DDL. Complete.
-- Redshift COPY template. Complete.
+- PostgreSQL schema creation SQL. Complete.
+- PostgreSQL raw table DDL. Complete.
+- PostgreSQL audit table DDL. Complete.
+- PostgreSQL correction table DDL. Complete.
+- Python raw loader using `COPY FROM STDIN`. Complete.
 
 Output candidates:
 
-- `infra/aws/s3_iam_setup.md`
-- `infra/redshift/001_create_schemas.sql`
-- `infra/redshift/002_create_raw_tables.sql`
-- `infra/redshift/003_create_audit_tables.sql`
+- `infra/postgres/001_create_schemas.sql`
+- `infra/postgres/002_create_raw_tables.sql`
+- `infra/postgres/003_create_audit_tables.sql`
+- `scripts/loading/load_raw_to_postgres.py`
 
-## Phase 4: Airflow DAG Skeleton
+## Phase 3b: Preserved AWS And Redshift Bootstrap
 
-Status: in progress.
+Status: preserved / deferred.
+
+The original AWS artifacts remain under `infra/aws` and `infra/redshift`.
+
+## Phase 4: Airflow DAGs
+
+Status: complete.
 
 Goal:
 
-Orchestrate ingestion, Redshift load, and dbt commands.
+Orchestrate ingestion, PostgreSQL load, and dbt commands locally while
+preserving the original AWS DAG.
 
 Deliverables:
 
-- Airflow DAG. Initial skeleton complete.
-- Configurable runtime parameters. Initial skeleton complete.
-- Retries and failure handling. Initial skeleton complete.
+- Local Airflow DAG. Complete.
+- Preserved AWS Airflow DAG. Complete.
+- Configurable runtime parameters. Complete.
+- Retries and failure handling. Complete.
 - Task boundaries:
   - validate dataset. Complete.
-  - upload to S3. Complete.
-  - copy to Redshift. Complete.
+  - prepare local raw files. Complete.
+  - load to PostgreSQL. Complete.
+  - build staging/intermediate snapshot inputs. Complete.
   - dbt snapshot. Complete.
   - dbt build. Complete.
   - dbt test. Complete.
-  - record audit status
+  - record audit status. Complete.
 
 Output candidates:
 
 - `airflow/dags/olist_modern_data_stack.py`
+- `airflow/dags/olist_modern_data_stack_local.py`
 - `airflow/README.md`
 
 ## Phase 5: dbt Project Bootstrap
@@ -131,12 +143,13 @@ Status: complete.
 
 Goal:
 
-Create a dbt project targeting Redshift.
+Create a dbt project targeting local PostgreSQL by default, with Redshift kept
+as an alternate target.
 
 Deliverables:
 
 - `dbt_project.yml`. Complete.
-- `profiles.yml.example`. Complete.
+- `profiles.yml.example` with `local_pg` default and `redshift` target. Complete.
 - Source definitions. Complete.
 - Staging model structure. Complete.
 - Basic dbt tests. Complete.
@@ -157,7 +170,7 @@ macros/
 Notes:
 
 - Staging models are implemented as views.
-- Custom schema naming maps dbt schemas directly to Redshift schemas such as
+- Custom schema naming maps dbt schemas directly to warehouse schemas such as
   `staging`, `intermediate`, `core`, and `marts`.
 - Generic tests include `non_negative` and `unique_combination_of_columns` so the
   project does not require `dbt_utils` in the first version.

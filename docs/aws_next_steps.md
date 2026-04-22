@@ -1,5 +1,8 @@
 # AWS Next Steps
 
+Status: deferred. The active `main` branch now runs locally with PostgreSQL.
+This checklist is preserved for a future AWS S3 + Redshift deployment.
+
 Use this checklist when moving from local development to the first real
 end-to-end AWS run.
 

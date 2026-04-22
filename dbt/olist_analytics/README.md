@@ -1,18 +1,28 @@
 # olist_analytics dbt Project
 
-This dbt project transforms Olist raw tables in Redshift into staging models,
-SCD2 dimensions, a core star schema, and business marts.
+This dbt project transforms Olist raw tables into staging models, SCD2
+dimensions, a core star schema, and business marts.
+
+The default target is local PostgreSQL:
+
+```text
+DBT_TARGET=local_pg
+```
+
+A Redshift target is still present in `profiles.yml.example` for future AWS
+work.
 
 ## Setup
 
-Copy the profile example to your dbt profiles directory or point dbt to this
-project directory with `DBT_PROFILES_DIR`.
+Copy the profile example to this project directory or point dbt to it with
+`DBT_PROFILES_DIR`.
 
 ```powershell
 copy dbt\olist_analytics\profiles.yml.example dbt\olist_analytics\profiles.yml
+cd dbt\olist_analytics
+$env:DBT_PROFILES_DIR = (Get-Location).Path
+$env:POSTGRES_HOST = "localhost"
 ```
-
-Then set Redshift environment variables from the root `.env.example`.
 
 ## Useful Commands
 
@@ -21,12 +31,15 @@ dbt debug
 dbt parse
 dbt source freshness
 dbt snapshot --vars '{batch_date: "2018-09-01"}'
-dbt build --select staging
-dbt test
+dbt build --vars '{batch_date: "2018-09-01", lookback_days: 3}'
+dbt test --vars '{batch_date: "2018-09-01", lookback_days: 3}'
 ```
 
 The project includes a schema naming macro that maps dbt custom schemas directly
-to Redshift schemas such as `staging`, `intermediate`, `core`, and `marts`.
+to warehouse schemas such as `staging`, `intermediate`, `core`, and `marts`.
+
+Small Postgres/Redshift SQL differences are isolated in compatibility macros
+under `macros/warehouse_compat.sql`.
 
 ## Data Quality Tests
 

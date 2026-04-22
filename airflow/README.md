@@ -4,57 +4,61 @@ This folder contains the orchestration layer for the Olist Modern Data Stack
 project.
 
 The local Docker Compose setup runs Airflow in standalone mode with SQLite and
-`SequentialExecutor`. This is intentionally lightweight for a pet project and
-local DAG testing. It is not a production Airflow deployment.
+`SequentialExecutor`. PostgreSQL is used as the analytics warehouse, not as the
+Airflow metadata database.
 
-The first DAG is a skeleton that captures the intended production flow:
+## DAGs
+
+Local default DAG:
+
+```text
+olist_modern_data_stack_local
+```
+
+Task flow:
 
 ```text
 validate_source_contract
-  -> upload_raw_files_to_s3
-  -> generate_and_upload_correction_feeds
-  -> copy_raw_files_to_redshift
+  -> prepare_raw_files
+  -> generate_correction_feeds
+  -> load_raw_files_to_postgres
+  -> dbt_run_snapshot_inputs
   -> dbt_snapshot
   -> dbt_build
   -> dbt_test
 ```
 
-The DAG is intentionally parameterized so it can support manual historical
-backfills and scheduled daily runs.
-
-## Required Environment Variables
-
-For Docker Compose, copy `.env.example` to `.env` and fill the AWS/Redshift
-values there. The Airflow container reads `.env` at startup from the mounted
-project folder, which keeps secret values out of `docker compose config`
-output.
+Preserved AWS/Redshift DAG:
 
 ```text
-OLIST_PROJECT_ROOT
-OLIST_S3_BUCKET
-OLIST_S3_PREFIX
-AWS_REGION
-REDSHIFT_COPY_IAM_ROLE_ARN
-REDSHIFT_HOST
-REDSHIFT_PORT
-REDSHIFT_DATABASE
-REDSHIFT_USER
-REDSHIFT_PASSWORD
+olist_modern_data_stack
 ```
 
-AWS credentials can be provided in `.env` with `AWS_ACCESS_KEY_ID` and
-`AWS_SECRET_ACCESS_KEY` for this local pet-project setup.
+That DAG still models the original S3 -> Redshift COPY path and is kept for
+future AWS work.
 
-`OLIST_PROJECT_ROOT` should point to the repository root. If it is not set, the
-DAG attempts to infer it from the local folder layout.
+## Required Local Environment
 
-## Local Docker Compose
-
-Create local environment config:
+For Docker Compose, copy `.env.example` to `.env`.
 
 ```powershell
 copy .env.example .env
 ```
+
+Local defaults:
+
+```text
+DBT_TARGET=local_pg
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=olist_analytics
+POSTGRES_USER=olist
+POSTGRES_PASSWORD=olist
+```
+
+`OLIST_PROJECT_ROOT` is set by Compose to `/opt/airflow/project`.
+
+## Local Docker Compose
 
 Build the local Airflow image:
 
@@ -62,7 +66,7 @@ Build the local Airflow image:
 docker compose build
 ```
 
-Start Airflow:
+Start PostgreSQL and Airflow:
 
 ```powershell
 docker compose up -d
@@ -81,10 +85,23 @@ first startup:
 docker compose logs airflow
 ```
 
-Stop Airflow:
+Stop containers:
 
 ```powershell
 docker compose down
+```
+
+Reset Airflow metadata:
+
+```powershell
+docker compose down
+Remove-Item airflow\airflow.db -Force
+```
+
+Reset the local PostgreSQL warehouse:
+
+```powershell
+docker compose down -v
 ```
 
 ## VS Code and Pylance
@@ -94,20 +111,9 @@ not by the local Windows virtual environment. The repository includes minimal
 Pylance stubs under `typings/airflow` so VS Code can resolve DAG imports while
 the real runtime dependency remains in the Airflow container.
 
-Reset the local Airflow SQLite metadata DB:
-
-```powershell
-docker compose down
-Remove-Item airflow\airflow.db -Force
-```
-
-SQLite/SequentialExecutor means Airflow runs tasks one at a time. That is fine
-for local validation, but the production-like AWS run can later move to Postgres
-and LocalExecutor or CeleryExecutor.
-
 ## Runtime Parameters
 
-The DAG accepts:
+Both DAGs accept:
 
 ```text
 batch_date
@@ -115,6 +121,6 @@ lookback_days
 full_refresh
 ```
 
-`batch_date` controls the S3 partition path and later incremental processing.
-`lookback_days` is reserved for late-arriving data handling in dbt incremental
-models. `full_refresh` is reserved for controlled dbt full refresh runs.
+`batch_date` controls raw partition paths and correction feed visibility.
+`lookback_days` controls late-arriving data handling in dbt incremental models.
+`full_refresh` toggles controlled dbt full refresh runs.

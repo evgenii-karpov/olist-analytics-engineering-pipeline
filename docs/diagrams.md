@@ -7,8 +7,8 @@ flowchart LR
     source["Olist Kaggle CSV archive"]
     corrections["Generated correction feeds"]
     ingestion["Python ingestion scripts"]
-    s3["AWS S3 raw zone"]
-    copy["Redshift COPY"]
+    rawzone["Local S3-shaped raw zone"]
+    copy["PostgreSQL COPY FROM STDIN"]
     raw["raw schema"]
     staging["dbt staging views"]
     intermediate["dbt intermediate models"]
@@ -25,9 +25,9 @@ flowchart LR
     airflow --> marts
 
     source --> ingestion
-    corrections --> s3
-    ingestion --> s3
-    s3 --> copy
+    corrections --> rawzone
+    ingestion --> rawzone
+    rawzone --> copy
     copy --> raw
     raw --> staging
     staging --> intermediate
@@ -42,7 +42,7 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    raw["raw\nAppend-only Redshift tables loaded from S3"]
+    raw["raw\nAppend-only PostgreSQL tables loaded from local raw files"]
     staging["staging\nTyped and cleaned dbt views"]
     intermediate["intermediate\nReusable business logic"]
     snapshots["snapshots\nSCD2 history managed by dbt"]
@@ -142,15 +142,15 @@ erDiagram
 sequenceDiagram
     participant Airflow
     participant Generator as Correction Feed Generator
-    participant S3
-    participant Redshift
+    participant RawZone as Local Raw Zone
+    participant Postgres as PostgreSQL
     participant dbt
 
     Airflow->>Generator: Generate corrections visible as of batch_date
-    Generator->>S3: Upload customer/product correction feeds
-    Airflow->>Redshift: COPY raw correction tables
+    Generator->>RawZone: Write customer/product correction feeds
+    Airflow->>Postgres: COPY raw correction tables
     Airflow->>dbt: dbt snapshot --vars batch_date
-    dbt->>Redshift: Read current attributes as of batch_date
-    dbt->>Redshift: Insert new snapshot versions when tracked attributes change
+    dbt->>Postgres: Read current attributes as of batch_date
+    dbt->>Postgres: Insert new snapshot versions when tracked attributes change
     Airflow->>dbt: dbt build core/marts
 ```

@@ -1,4 +1,25 @@
 services:
+  postgres:
+    image: postgres:18
+    container_name: olist-postgres
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_DB: olist_analytics
+      POSTGRES_USER: olist
+      POSTGRES_PASSWORD: olist
+      PGDATA: /var/lib/postgresql/18/docker
+    ports:
+      - "5432:5432"
+    volumes:
+      - olist_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U olist -d olist_analytics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   airflow:
     build:
       context: .
@@ -6,6 +27,9 @@ services:
     image: olist-airflow:local
     container_name: olist-airflow
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     command:
       - bash
       - /opt/airflow/project/docker/airflow/load-env-and-run.sh
@@ -22,6 +46,12 @@ services:
       OLIST_PROJECT_ROOT: /opt/airflow/project
       OLIST_PYTHON_BIN: python
       DBT_PROFILES_DIR: /opt/airflow/project/dbt/olist_analytics
+      DBT_TARGET: local_pg
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: olist_analytics
+      POSTGRES_USER: olist
+      POSTGRES_PASSWORD: olist
     volumes:
       - ./:/opt/airflow/project
       - ./airflow/dags:/opt/airflow/dags
@@ -33,3 +63,6 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+
+volumes:
+  olist_postgres_data:

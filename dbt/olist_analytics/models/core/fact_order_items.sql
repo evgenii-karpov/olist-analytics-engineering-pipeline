@@ -2,11 +2,20 @@
     config(
         materialized='incremental',
         unique_key='order_item_key',
-        incremental_strategy='delete+insert',
-        sort='order_purchase_timestamp',
-        dist='order_id'
+        incremental_strategy='delete+insert'
     )
 }}
+
+{% if target.type == 'redshift' %}
+    {{
+        config(
+            sort='order_purchase_timestamp',
+            dist='order_id'
+        )
+    }}
+{% endif %}
+
+{% set lookback_days = var('lookback_days', 3) | int %}
 
 -- The incremental branch references correction feeds to widen the reprocessing
 -- window when SCD2 changes are business-effective in the past.
@@ -20,11 +29,10 @@ with
 incremental_reprocess_boundaries as (
     select
         coalesce(
-            dateadd(
-                day,
-                -{{ var('lookback_days', 3) }},
-                max(order_purchase_timestamp)
-            ),
+            {{ dateadd_days(
+                'max(order_purchase_timestamp)',
+                lookback_days * -1
+            ) }},
             '1900-01-01'::timestamp
         ) as reprocess_from
     from {{ this }}
@@ -88,8 +96,14 @@ fact_base as (
         order_items.freight_value,
         order_items.price + order_items.freight_value as gross_item_amount,
         payment_allocations.allocated_payment_value,
-        datediff(day, orders.order_purchase_timestamp, orders.order_delivered_customer_date) as delivery_days,
-        datediff(day, orders.order_estimated_delivery_date, orders.order_delivered_customer_date) as delivery_delay_days,
+        {{ days_between(
+            'orders.order_purchase_timestamp',
+            'orders.order_delivered_customer_date'
+        ) }} as delivery_days,
+        {{ days_between(
+            'orders.order_estimated_delivery_date',
+            'orders.order_delivered_customer_date'
+        ) }} as delivery_delay_days,
         case
             when orders.order_delivered_customer_date > orders.order_estimated_delivery_date then true
             else false
