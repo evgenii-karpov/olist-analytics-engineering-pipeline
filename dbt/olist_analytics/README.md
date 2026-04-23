@@ -30,8 +30,9 @@ $env:POSTGRES_HOST = "localhost"
 dbt debug
 dbt parse
 dbt source freshness
+dbt run --select staging intermediate --vars '{batch_date: "2018-09-01"}'
 dbt snapshot --vars '{batch_date: "2018-09-01"}'
-dbt build --vars '{batch_date: "2018-09-01", lookback_days: 3}'
+dbt build --exclude resource_type:snapshot --vars '{batch_date: "2018-09-01", lookback_days: 3}'
 dbt test --vars '{batch_date: "2018-09-01", lookback_days: 3}'
 ```
 

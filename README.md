@@ -104,8 +104,8 @@ python scripts\utilities\validate_source_contract.py
 Prepare local raw files:
 
 ```powershell
-python scripts\ingestion\prepare_olist_raw_files.py --batch-date 2018-09-01 --run-id manual_2018_09_01
-python scripts\ingestion\generate_correction_feeds.py --batch-date 2018-09-01 --run-id manual_2018_09_01
+python scripts\ingestion\prepare_olist_raw_files.py --batch-date 2018-09-01 --batch-id 2018-09-01 --run-id manual_2018_09_01
+python scripts\ingestion\generate_correction_feeds.py --batch-date 2018-09-01 --batch-id 2018-09-01 --run-id manual_2018_09_01
 ```
 
 Load raw files into PostgreSQL:
@@ -114,6 +114,7 @@ Load raw files into PostgreSQL:
 python scripts\loading\load_raw_to_postgres.py `
   --bootstrap-sql-dir infra/postgres `
   --batch-date 2018-09-01 `
+  --batch-id 2018-09-01 `
   --run-id manual_2018_09_01
 ```
 
@@ -125,8 +126,10 @@ cd dbt\olist_analytics
 $env:DBT_PROFILES_DIR = (Get-Location).Path
 $env:POSTGRES_HOST = "localhost"
 dbt debug
+dbt source freshness
+dbt run --select staging intermediate --vars '{batch_date: "2018-09-01"}'
 dbt snapshot --vars '{batch_date: "2018-09-01"}'
-dbt build --vars '{batch_date: "2018-09-01", lookback_days: 3}'
+dbt build --exclude resource_type:snapshot --vars '{batch_date: "2018-09-01", lookback_days: 3}'
 dbt test --vars '{batch_date: "2018-09-01", lookback_days: 3}'
 ```
 
@@ -166,7 +169,7 @@ validate_source_contract
   default path.
 - dbt targets PostgreSQL by default and keeps a Redshift profile target.
 - Small SQL dialect differences are isolated in dbt macros where practical.
-- Raw data is append-only and includes `_batch_id`, `_loaded_at`,
+- Raw data includes stable logical `_batch_id`, `_loaded_at`,
   `_source_file`, and `_source_system`.
 - Staging models are views; core dimensions, facts, and marts are tables.
 

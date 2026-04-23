@@ -123,6 +123,7 @@ def prepare_entity(
     entity: SourceEntity,
     output_dir: Path,
     batch_date: str,
+    batch_id: str,
     run_id: str,
     loaded_at: str,
 ) -> PreparedFile:
@@ -152,7 +153,7 @@ def prepare_entity(
             writer.writeheader()
 
             for row in reader:
-                row["_batch_id"] = run_id
+                row["_batch_id"] = batch_id
                 row["_loaded_at"] = loaded_at
                 row["_source_file"] = entity.file_name
                 row["_source_system"] = SOURCE_SYSTEM
@@ -173,6 +174,7 @@ def prepare_entities(
     profile_path: Path,
     output_dir: Path,
     batch_date: str,
+    batch_id: str,
     run_id: str,
     clean: bool,
 ) -> list[PreparedFile]:
@@ -194,6 +196,7 @@ def prepare_entities(
                 entity=entity,
                 output_dir=output_dir,
                 batch_date=batch_date,
+                batch_id=batch_id,
                 run_id=run_id,
                 loaded_at=loaded_at,
             )

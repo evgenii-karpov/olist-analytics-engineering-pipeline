@@ -71,6 +71,7 @@ Key design:
 
 ```text
 batch_date
+batch_id
 lookback_days
 run_id
 raw_dir

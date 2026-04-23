@@ -122,5 +122,8 @@ full_refresh
 ```
 
 `batch_date` controls raw partition paths and correction feed visibility.
+The local DAG also uses `batch_date` as the stable `_batch_id` for warehouse
+idempotency, while Airflow `run_id` remains the attempt identifier and raw path
+partition.
 `lookback_days` controls late-arriving data handling in dbt incremental models.
 `full_refresh` toggles controlled dbt full refresh runs.

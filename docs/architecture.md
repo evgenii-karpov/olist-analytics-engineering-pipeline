@@ -41,6 +41,8 @@ Responsibilities:
 - Validate column names before load.
 - Generate deterministic raw file paths.
 - Add `_batch_id`, `_loaded_at`, `_source_file`, and `_source_system`.
+- Keep `_batch_id` stable for a logical batch while `run_id` identifies the
+  individual Airflow/manual attempt.
 - Support repeatable manual runs and Airflow scheduled runs.
 - Keep S3 upload available as an optional wrapper script.
 
@@ -126,10 +128,12 @@ model can be kept portable.
 
 Each run writes raw files and then loads them idempotently:
 
-1. Delete rows for the current `_batch_id` from the target raw table.
-2. Delete the matching audit row.
-3. Stream the gzip CSV into PostgreSQL with `COPY FROM STDIN`.
-4. Insert an `audit.load_runs` success or failure row.
+1. Use `batch_date` as the default stable local `_batch_id`.
+2. Delete rows for the current `_batch_id` from the target raw table.
+3. Delete the matching audit row for the logical batch and entity.
+4. Stream the gzip CSV into PostgreSQL with `COPY FROM STDIN`.
+5. Insert an `audit.load_runs` success or failure row with the concrete
+   `run_id`.
 
 This mirrors the original Redshift load semantics while avoiding AWS.
 
@@ -153,7 +157,8 @@ The project supports:
 
 - Initial historical load.
 - Simulated daily backfills through Airflow params.
-- Repeatable local demo runs with a fixed `batch_date` and `run_id`.
+- Repeatable local demo runs with a fixed `batch_date`, even if each attempt has
+  a different `run_id`.
 
 The generated correction feeds only publish changes visible as of the selected
 `batch_date`, which makes historical SCD2 behavior demonstrable even with a

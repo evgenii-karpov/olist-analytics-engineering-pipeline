@@ -28,6 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--s3-prefix", default="olist")
     parser.add_argument("--s3-bucket")
     parser.add_argument("--batch-date", required=True)
+    parser.add_argument("--batch-id")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--upload", action="store_true")
     parser.add_argument("--no-clean", action="store_true")
@@ -39,11 +40,13 @@ def main() -> None:
     if args.upload and not args.s3_bucket:
         raise ValueError("--s3-bucket is required when --upload is set")
 
+    batch_id = args.batch_id or args.run_id
     prepared_files = prepare_entities(
         archive_path=Path(args.archive),
         profile_path=Path(args.profile),
         output_dir=Path(args.output_dir),
         batch_date=args.batch_date,
+        batch_id=batch_id,
         run_id=args.run_id,
         clean=not args.no_clean,
     )

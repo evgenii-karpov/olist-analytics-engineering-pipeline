@@ -24,6 +24,7 @@ DBT_PROJECT_DIR = PROJECT_ROOT / "dbt" / "olist_analytics"
 LOCAL_RAW_DIR = "data/raw/olist"
 POSTGRES_SQL_DIR = "infra/postgres"
 LOCAL_RUN_ID = "{{ run_id | replace(':', '_') | replace('+', '_') }}"
+LOCAL_BATCH_ID = "{{ params.batch_date }}"
 
 
 default_args = {
@@ -69,6 +70,7 @@ with DAG(
             "--profile docs/source_profile.json "
             f"--output-dir {LOCAL_RAW_DIR} "
             "--batch-date '{{ params.batch_date }}' "
+            f"--batch-id '{LOCAL_BATCH_ID}' "
             f"--run-id '{LOCAL_RUN_ID}'"
         ),
     )
@@ -81,6 +83,7 @@ with DAG(
             "--archive olist.zip "
             f"--output-dir {LOCAL_RAW_DIR} "
             "--batch-date '{{ params.batch_date }}' "
+            f"--batch-id '{LOCAL_BATCH_ID}' "
             f"--run-id '{LOCAL_RUN_ID}'"
         ),
     )
@@ -94,6 +97,7 @@ with DAG(
             "--profile docs/source_profile.json "
             f"--bootstrap-sql-dir {POSTGRES_SQL_DIR} "
             "--batch-date '{{ params.batch_date }}' "
+            f"--batch-id '{LOCAL_BATCH_ID}' "
             f"--run-id '{LOCAL_RUN_ID}'"
         ),
         env={
@@ -122,7 +126,7 @@ with DAG(
     )
 
     dbt_build_command = (
-        "dbt build --vars "
+        "dbt build --exclude resource_type:snapshot --vars "
         "'{batch_date: \"{{ params.batch_date }}\", lookback_days: {{ params.lookback_days }}}'"
     )
 

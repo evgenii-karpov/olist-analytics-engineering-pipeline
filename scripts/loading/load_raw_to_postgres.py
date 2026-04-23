@@ -96,7 +96,7 @@ def record_success(
         count_statement = sql.SQL(
             "select count(*) from {}.{} where _batch_id = %s"
         ).format(sql.Identifier("raw"), sql.Identifier(spec.entity_name))
-        cursor.execute(count_statement, (run_id,))
+        cursor.execute(count_statement, (batch_id,))
         rows_loaded = cursor.fetchone()[0]
         cursor.execute(
             """
@@ -116,7 +116,7 @@ def record_success(
             """,
             (
                 run_id,
-                run_id,
+                batch_id,
                 spec.entity_name,
                 source_path.resolve().as_uri(),
                 f"raw.{spec.entity_name}",
@@ -129,12 +129,21 @@ def record_success(
 def record_failure(
     connection: PgConnection,
     spec: RawLoadSpec,
+    batch_id: str,
     run_id: str,
     source_path: Path,
     started_at: datetime,
     error: Exception,
 ) -> None:
     with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            delete from audit.load_runs
+            where batch_id = %s
+              and entity_name = %s;
+            """,
+            (batch_id, spec.entity_name),
+        )
         cursor.execute(
             """
             insert into audit.load_runs (
@@ -153,7 +162,7 @@ def record_failure(
             """,
             (
                 run_id,
-                run_id,
+                batch_id,
                 spec.entity_name,
                 source_path.resolve().as_uri() if source_path.exists() else str(source_path),
                 f"raw.{spec.entity_name}",
@@ -169,35 +178,36 @@ def load_one_spec(
     spec: RawLoadSpec,
     raw_dir: Path,
     batch_date: str,
+    batch_id: str,
     run_id: str,
 ) -> None:
     source_path = raw_file_path(raw_dir, spec.entity_name, batch_date, run_id, spec.file_name)
-    if not source_path.exists():
-        raise FileNotFoundError(f"Missing prepared raw file: {source_path}")
-
     started_at = utc_now()
     try:
         with connection.cursor() as cursor:
             delete_statement = sql.SQL(
                 "delete from {}.{} where _batch_id = %s"
             ).format(sql.Identifier("raw"), sql.Identifier(spec.entity_name))
-            cursor.execute(delete_statement, (run_id,))
+            cursor.execute(delete_statement, (batch_id,))
             cursor.execute(
                 """
                 delete from audit.load_runs
-                where load_run_id = %s
+                where batch_id = %s
                   and entity_name = %s;
                 """,
-                (run_id, spec.entity_name),
+                (batch_id, spec.entity_name),
             )
 
+        if not source_path.exists():
+            raise FileNotFoundError(f"Missing prepared raw file: {source_path}")
+
         copy_file_to_raw_table(connection, spec, source_path)
-        record_success(connection, spec, run_id, run_id, source_path, started_at)
+        record_success(connection, spec, batch_id, run_id, source_path, started_at)
         connection.commit()
         print(f"Loaded {spec.entity_name} from {source_path}")
     except Exception as exc:
         connection.rollback()
-        record_failure(connection, spec, run_id, source_path, started_at, exc)
+        record_failure(connection, spec, batch_id, run_id, source_path, started_at, exc)
         raise
 
 
@@ -206,10 +216,11 @@ def load_all(
     specs: Iterable[RawLoadSpec],
     raw_dir: Path,
     batch_date: str,
+    batch_id: str,
     run_id: str,
 ) -> None:
     for spec in specs:
-        load_one_spec(connection, spec, raw_dir, batch_date, run_id)
+        load_one_spec(connection, spec, raw_dir, batch_date, batch_id, run_id)
 
 
 def parse_args() -> argparse.Namespace:
@@ -218,6 +229,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--profile", default="docs/source_profile.json")
     parser.add_argument("--bootstrap-sql-dir")
     parser.add_argument("--batch-date", required=True)
+    parser.add_argument("--batch-id")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--host", default=os.environ.get("POSTGRES_HOST", "localhost"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("POSTGRES_PORT", "5432")))
@@ -229,6 +241,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    batch_id = args.batch_id or args.batch_date
     connection = postgres_connection(args)
     try:
         if args.bootstrap_sql_dir:
@@ -239,6 +252,7 @@ def main() -> None:
             specs=load_specs(Path(args.profile)),
             raw_dir=Path(args.raw_dir),
             batch_date=args.batch_date,
+            batch_id=batch_id,
             run_id=args.run_id,
         )
     finally:

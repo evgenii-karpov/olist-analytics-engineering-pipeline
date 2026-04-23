@@ -138,6 +138,7 @@ def write_feed(
     feed: FeedSpec,
     rows: list[dict[str, str]],
     batch_date: str,
+    batch_id: str,
     run_id: str,
     loaded_at: str,
 ) -> PreparedFile:
@@ -155,7 +156,7 @@ def write_feed(
         writer.writeheader()
         for row in rows:
             row = dict(row)
-            row["_batch_id"] = run_id
+            row["_batch_id"] = batch_id
             row["_loaded_at"] = loaded_at
             row["_source_file"] = feed.file_name
             row["_source_system"] = SOURCE_SYSTEM
@@ -179,6 +180,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--s3-bucket")
     parser.add_argument("--s3-prefix", default="olist")
     parser.add_argument("--upload", action="store_true")
+    parser.add_argument("--batch-id")
     parser.add_argument("--customer-count", type=int, default=20)
     parser.add_argument("--product-count", type=int, default=20)
     parser.add_argument("--no-clean", action="store_true")
@@ -192,6 +194,8 @@ def main() -> None:
 
     if args.upload and not args.s3_bucket:
         raise ValueError("--s3-bucket is required when --upload is set")
+
+    batch_id = args.batch_id or (args.run_id if args.upload else args.batch_date)
 
     if not args.no_clean:
         clean_entity_run_dirs(
@@ -216,6 +220,7 @@ def main() -> None:
             CUSTOMER_FEED,
             customer_rows,
             args.batch_date,
+            batch_id,
             args.run_id,
             loaded_at,
         ),
@@ -224,6 +229,7 @@ def main() -> None:
             PRODUCT_FEED,
             product_rows,
             args.batch_date,
+            batch_id,
             args.run_id,
             loaded_at,
         ),

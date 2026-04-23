@@ -55,6 +55,7 @@ Prepare raw files in the local raw zone:
 ```powershell
 python scripts\ingestion\prepare_olist_raw_files.py `
   --batch-date 2018-09-01 `
+  --batch-id 2018-09-01 `
   --run-id manual_2018_09_01
 ```
 
@@ -63,6 +64,7 @@ Generate correction feeds:
 ```powershell
 python scripts\ingestion\generate_correction_feeds.py `
   --batch-date 2018-09-01 `
+  --batch-id 2018-09-01 `
   --run-id manual_2018_09_01
 ```
 
@@ -72,6 +74,7 @@ Bootstrap PostgreSQL schemas and load raw files:
 python scripts\loading\load_raw_to_postgres.py `
   --bootstrap-sql-dir infra/postgres `
   --batch-date 2018-09-01 `
+  --batch-id 2018-09-01 `
   --run-id manual_2018_09_01
 ```
 
@@ -91,7 +94,7 @@ dbt debug
 dbt source freshness
 dbt run --select staging intermediate --vars '{batch_date: "2018-09-01"}'
 dbt snapshot --vars '{batch_date: "2018-09-01"}'
-dbt build --vars '{batch_date: "2018-09-01", lookback_days: 3}'
+dbt build --exclude resource_type:snapshot --vars '{batch_date: "2018-09-01", lookback_days: 3}'
 dbt test --vars '{batch_date: "2018-09-01", lookback_days: 3}'
 ```
 

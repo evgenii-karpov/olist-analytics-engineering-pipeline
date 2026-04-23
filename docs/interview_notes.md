@@ -50,6 +50,10 @@ _source_file
 _source_system
 ```
 
+In the local pipeline, `_batch_id` is the stable logical batch identifier
+derived from `batch_date`. The Airflow `run_id` identifies a concrete load
+attempt and stays in the raw path/audit metadata.
+
 dbt owns the transformation logic. Staging models are views, dimensions and
 marts are tables, and the main fact table is incremental.
 

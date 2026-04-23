@@ -20,6 +20,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--profile", default="docs/source_profile.json")
     parser.add_argument("--output-dir", default="data/raw/olist")
     parser.add_argument("--batch-date", required=True)
+    parser.add_argument("--batch-id")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--no-clean", action="store_true")
     return parser.parse_args()
@@ -27,11 +28,13 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    batch_id = args.batch_id or args.batch_date
     prepared_files = prepare_entities(
         archive_path=Path(args.archive),
         profile_path=Path(args.profile),
         output_dir=Path(args.output_dir),
         batch_date=args.batch_date,
+        batch_id=batch_id,
         run_id=args.run_id,
         clean=not args.no_clean,
     )
