@@ -72,3 +72,37 @@ jobs:
       - name: Parse dbt project
         run: dbt parse --no-partial-parse --show-all-deprecations
         working-directory: dbt/olist_analytics
+
+  airflow-imports:
+    name: Docker Compose and Airflow DAG imports
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate Compose configuration
+        run: docker compose config
+
+      - name: Start Airflow stack
+        run: docker compose up -d postgres airflow
+
+      - name: Check Airflow DAG import errors
+        run: |
+          for attempt in {1..30}; do
+            if docker compose exec -T airflow airflow dags list-import-errors --output json > airflow_import_errors.json; then
+              cat airflow_import_errors.json
+              if python -c 'import json, sys; errors = json.load(open("airflow_import_errors.json")); sys.exit(0 if not errors else 1)'; then
+                exit 0
+              fi
+              echo "Airflow DAG import errors detected"
+              exit 1
+            fi
+            echo "Airflow is not ready yet (attempt ${attempt}/30)"
+            sleep 10
+          done
+          exit 1
+
+      - name: Stop Airflow stack
+        if: always()
+        run: docker compose down -v
