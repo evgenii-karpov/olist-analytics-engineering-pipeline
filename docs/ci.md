@@ -15,7 +15,7 @@ dbt-static
   -> dbt parse without a warehouse connection.
 
 airflow-imports
-  -> docker compose config, Airflow image build, and DAG import errors.
+  -> docker compose config, Airflow image build, and isolated DagBag imports.
 
 fixture-integration
   -> PostgreSQL 18 service container and the small fixture end-to-end path.

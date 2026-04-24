@@ -88,12 +88,17 @@ jobs:
         run: docker compose build airflow
 
       - name: Check Airflow DAG import errors
-        run: >-
-          docker compose run
-          --rm
-          --no-deps
-          airflow
-          python /opt/airflow/project/scripts/ci/check_airflow_dag_imports.py
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/opt/airflow/project" \
+            -e OLIST_PROJECT_ROOT=/opt/airflow/project \
+            -e AIRFLOW__CORE__DAGS_FOLDER=/opt/airflow/project/airflow/dags \
+            -e AIRFLOW_HOME=/tmp/airflow \
+            -e AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////tmp/airflow/airflow.db \
+            -e AIRFLOW__LOGGING__BASE_LOG_FOLDER=/tmp/airflow/logs \
+            -w /opt/airflow/project \
+            olist-airflow:local \
+            python scripts/ci/check_airflow_dag_imports.py
 
       - name: Clean up Compose resources
         if: always()
