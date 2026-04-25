@@ -209,13 +209,6 @@ with DAG(
             '--s3-prefix "$OLIST_S3_PREFIX" '
             "--upload"
         ),
-        env={
-            **os.environ,
-            "AWS_PROFILE": os.environ.get("AWS_PROFILE", "default"),
-            "AWS_REGION": os.environ.get("AWS_REGION", "us-east-1"),
-            "OLIST_S3_BUCKET": os.environ.get("OLIST_S3_BUCKET", ""),
-            "OLIST_S3_PREFIX": os.environ.get("OLIST_S3_PREFIX", "olist"),
-        },
     )
 
     generate_and_upload_correction_feeds = BashOperator(
@@ -231,13 +224,6 @@ with DAG(
             '--s3-prefix "$OLIST_S3_PREFIX" '
             "--upload"
         ),
-        env={
-            **os.environ,
-            "AWS_PROFILE": os.environ.get("AWS_PROFILE", "default"),
-            "AWS_REGION": os.environ.get("AWS_REGION", "us-east-1"),
-            "OLIST_S3_BUCKET": os.environ.get("OLIST_S3_BUCKET", ""),
-            "OLIST_S3_PREFIX": os.environ.get("OLIST_S3_PREFIX", "olist"),
-        },
     )
 
     copy_raw_files_to_redshift = PythonOperator(

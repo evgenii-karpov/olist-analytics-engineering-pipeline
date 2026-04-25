@@ -31,16 +31,6 @@ LOCAL_RUN_ID = "{{ run_id | replace(':', '_') | replace('+', '_') }}"
 LOCAL_BATCH_ID = "{{ params.batch_date }}"
 
 
-POSTGRES_ENV = {
-    **os.environ,
-    "POSTGRES_HOST": os.environ.get("POSTGRES_HOST", "localhost"),
-    "POSTGRES_PORT": os.environ.get("POSTGRES_PORT", "5432"),
-    "POSTGRES_DB": os.environ.get("POSTGRES_DB", "olist_analytics"),
-    "POSTGRES_USER": os.environ.get("POSTGRES_USER", "olist"),
-    "POSTGRES_PASSWORD": os.environ.get("POSTGRES_PASSWORD", "olist"),
-}
-
-
 def batch_control_command(command: str, status: str | None = None) -> str:
     status_arg = f" --status {status}" if status else ""
     bootstrap_arg = (
@@ -91,7 +81,6 @@ def mark_batch_failed(context: dict) -> None:
             error_message,
         ],
         cwd=str(PROJECT_ROOT),
-        env=POSTGRES_ENV,
         check=False,
     )
 
@@ -127,7 +116,6 @@ with DAG(
         task_id="start_batch",
         cwd=str(PROJECT_ROOT),
         bash_command=batch_control_command("start"),
-        env=POSTGRES_ENV,
     )
 
     validate_source_contract = BashOperator(
@@ -144,7 +132,6 @@ with DAG(
         task_id="mark_source_validated",
         cwd=str(PROJECT_ROOT),
         bash_command=batch_control_command("mark", "SOURCE_VALIDATED"),
-        env=POSTGRES_ENV,
     )
 
     prepare_raw_files = BashOperator(
@@ -182,7 +169,6 @@ with DAG(
         task_id="mark_raw_prepared",
         cwd=str(PROJECT_ROOT),
         bash_command=batch_control_command("mark", "RAW_PREPARED"),
-        env=POSTGRES_ENV,
     )
 
     load_raw_files_to_postgres = BashOperator(
@@ -198,7 +184,6 @@ with DAG(
             f"--run-id '{LOCAL_RUN_ID}' "
             f"--dag-id {DAG_ID}"
         ),
-        env=POSTGRES_ENV,
     )
 
     reconcile_raw_load = BashOperator(
@@ -214,7 +199,6 @@ with DAG(
             f"--run-id '{LOCAL_RUN_ID}' "
             f"--dag-id {DAG_ID}"
         ),
-        env=POSTGRES_ENV,
     )
 
     dbt_run_snapshot_inputs = BashOperator(
@@ -230,7 +214,6 @@ with DAG(
         task_id="mark_snapshot_inputs_built",
         cwd=str(PROJECT_ROOT),
         bash_command=batch_control_command("mark", "DBT_SNAPSHOT_INPUTS_BUILT"),
-        env=POSTGRES_ENV,
     )
 
     dbt_snapshot = BashOperator(
@@ -243,7 +226,6 @@ with DAG(
         task_id="mark_dbt_snapshotted",
         cwd=str(PROJECT_ROOT),
         bash_command=batch_control_command("mark", "DBT_SNAPSHOTTED"),
-        env=POSTGRES_ENV,
     )
 
     dbt_build_command = (
@@ -268,7 +250,6 @@ with DAG(
         task_id="mark_dbt_built",
         cwd=str(PROJECT_ROOT),
         bash_command=batch_control_command("mark", "DBT_BUILT"),
-        env=POSTGRES_ENV,
     )
 
     dbt_test = BashOperator(
@@ -284,7 +265,6 @@ with DAG(
         task_id="mark_tested",
         cwd=str(PROJECT_ROOT),
         bash_command=batch_control_command("mark", "TESTED"),
-        env=POSTGRES_ENV,
     )
 
     end = EmptyOperator(task_id="end")
