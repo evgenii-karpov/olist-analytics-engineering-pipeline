@@ -2,7 +2,8 @@
     config(
         materialized='incremental',
         unique_key='order_item_key',
-        incremental_strategy='delete+insert'
+        incremental_strategy='delete+insert',
+        pre_hook="{{ delete_stale_fact_order_items() }}"
     )
 }}
 
@@ -23,6 +24,16 @@
 -- depends_on: {{ ref('stg_olist__product_attribute_changes') }}
 
 with
+
+source_orders as (
+    select *
+    from {{ ref('stg_olist__orders') }}
+),
+
+source_order_items as (
+    select *
+    from {{ ref('stg_olist__order_items') }}
+),
 
 {% if is_incremental() %}
 
@@ -46,6 +57,20 @@ with
 
         select min(effective_at) as reprocess_from
         from {{ ref('stg_olist__product_attribute_changes') }}
+
+        union all
+
+        select min(source_orders.order_purchase_timestamp) as reprocess_from
+        from source_order_items
+        inner join source_orders
+            on source_order_items.order_id = source_orders.order_id
+        left join {{ this }} as existing_fact
+            on
+                md5(
+                    source_order_items.order_id || '|'
+                    || source_order_items.order_item_id::varchar
+                ) = existing_fact.order_item_key
+        where existing_fact.order_item_key is null
     ),
 
     incremental_reprocess_window as (
@@ -58,7 +83,7 @@ with
 
 orders as (
     select *
-    from {{ ref('stg_olist__orders') }}
+    from source_orders
 
     {% if is_incremental() %}
         where order_purchase_timestamp >= (
@@ -124,7 +149,7 @@ dates as (
 
 order_items as (
     select order_items.*
-    from {{ ref('stg_olist__order_items') }} as order_items
+    from source_order_items as order_items
     inner join orders
         on order_items.order_id = orders.order_id
 ),
