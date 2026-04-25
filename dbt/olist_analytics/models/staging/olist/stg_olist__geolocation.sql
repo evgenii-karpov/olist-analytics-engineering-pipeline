@@ -18,7 +18,7 @@ with ranked as (
                 upper(trim(geolocation_state))
             order by _loaded_at desc, _batch_id desc
         ) as row_number
-    from {{ source('olist_raw', 'geolocation') }}
+    from {{ source('olist', 'geolocation') }}
 )
 
 select

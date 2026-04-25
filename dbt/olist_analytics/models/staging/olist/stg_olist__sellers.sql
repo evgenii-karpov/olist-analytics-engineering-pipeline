@@ -12,7 +12,7 @@ with ranked as (
             partition by seller_id
             order by _loaded_at desc, _batch_id desc
         ) as row_number
-    from {{ source('olist_raw', 'sellers') }}
+    from {{ source('olist', 'sellers') }}
 )
 
 select

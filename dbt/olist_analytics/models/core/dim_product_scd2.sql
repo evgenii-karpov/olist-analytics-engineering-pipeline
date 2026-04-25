@@ -13,8 +13,8 @@ with base_rows as (
         null::timestamp as dbt_valid_from,
         null::timestamp as dbt_valid_to,
         0 as source_priority
-    from {{ ref('stg_products') }} as products
-    left join {{ ref('stg_product_category_translation') }} as translations
+    from {{ ref('stg_olist__products') }} as products
+    left join {{ ref('stg_olist__product_category_translation') }} as translations
         on products.product_category_name = translations.product_category_name
 ),
 

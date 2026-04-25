@@ -13,7 +13,7 @@ with ranked as (
             partition by order_id, payment_sequential
             order by _loaded_at desc, _batch_id desc
         ) as row_number
-    from {{ source('olist_raw', 'order_payments') }}
+    from {{ source('olist', 'order_payments') }}
 )
 
 select

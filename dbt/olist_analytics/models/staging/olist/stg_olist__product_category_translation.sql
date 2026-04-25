@@ -10,7 +10,7 @@ with ranked as (
             partition by lower(trim(product_category_name))
             order by _loaded_at desc, _batch_id desc
         ) as row_number
-    from {{ source('olist_raw', 'product_category_translation') }}
+    from {{ source('olist', 'product_category_translation') }}
 )
 
 select

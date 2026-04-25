@@ -19,8 +19,8 @@
 
 -- The incremental branch references correction feeds to widen the reprocessing
 -- window when SCD2 changes are business-effective in the past.
--- depends_on: {{ ref('stg_customer_profile_changes') }}
--- depends_on: {{ ref('stg_product_attribute_changes') }}
+-- depends_on: {{ ref('stg_olist__customer_profile_changes') }}
+-- depends_on: {{ ref('stg_olist__product_attribute_changes') }}
 
 with
 
@@ -40,12 +40,12 @@ with
         union all
 
         select min(effective_at) as reprocess_from
-        from {{ ref('stg_customer_profile_changes') }}
+        from {{ ref('stg_olist__customer_profile_changes') }}
 
         union all
 
         select min(effective_at) as reprocess_from
-        from {{ ref('stg_product_attribute_changes') }}
+        from {{ ref('stg_olist__product_attribute_changes') }}
     ),
 
     incremental_reprocess_window as (
@@ -58,7 +58,7 @@ with
 
 orders as (
     select *
-    from {{ ref('stg_orders') }}
+    from {{ ref('stg_olist__orders') }}
 
     {% if is_incremental() %}
         where order_purchase_timestamp >= (
@@ -70,7 +70,7 @@ orders as (
 
 order_items as (
     select order_items.*
-    from {{ ref('stg_order_items') }} as order_items
+    from {{ ref('stg_olist__order_items') }} as order_items
     inner join orders
         on order_items.order_id = orders.order_id
 ),
@@ -112,7 +112,7 @@ fact_base as (
     from order_items
     inner join orders
         on order_items.order_id = orders.order_id
-    left join {{ ref('stg_customers') }} as customers
+    left join {{ ref('stg_olist__customers') }} as customers
         on orders.customer_id = customers.customer_id
     left join {{ ref('int_order_payment_allocations') }} as payment_allocations
         on

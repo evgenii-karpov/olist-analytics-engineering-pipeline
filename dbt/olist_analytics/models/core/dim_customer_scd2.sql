@@ -9,7 +9,7 @@ with base_customers_ranked as (
             partition by customer_unique_id
             order by _loaded_at desc, customer_id desc
         ) as row_number
-    from {{ ref('stg_customers') }}
+    from {{ ref('stg_olist__customers') }}
 ),
 
 base_rows as (

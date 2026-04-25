@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: stg_customers
+  - name: stg_olist__customers
     description: Clean customer records with source metadata.
     columns:
       - name: customer_id
@@ -17,7 +17,7 @@ models:
       - name: customer_state
         tests:
           - not_null
-  - name: stg_geolocation
+  - name: stg_olist__geolocation
     description: Clean geolocation records.
     columns:
       - name: geolocation_zip_code_prefix
@@ -29,7 +29,7 @@ models:
       - name: geolocation_lng
         tests:
           - not_null
-  - name: stg_order_items
+  - name: stg_olist__order_items
     description: Clean order item records.
     tests:
       - unique_combination_of_columns:
@@ -43,7 +43,7 @@ models:
           - not_null
           - relationships:
               arguments:
-                to: ref('stg_orders')
+                to: ref('stg_olist__orders')
                 field: order_id
       - name: order_item_id
         tests:
@@ -53,14 +53,14 @@ models:
           - not_null
           - relationships:
               arguments:
-                to: ref('stg_products')
+                to: ref('stg_olist__products')
                 field: product_id
       - name: seller_id
         tests:
           - not_null
           - relationships:
               arguments:
-                to: ref('stg_sellers')
+                to: ref('stg_olist__sellers')
                 field: seller_id
       - name: price
         tests:
@@ -70,7 +70,7 @@ models:
         tests:
           - not_null
           - non_negative
-  - name: stg_order_payments
+  - name: stg_olist__order_payments
     description: Clean order payment records.
     tests:
       - unique_combination_of_columns:
@@ -84,7 +84,7 @@ models:
           - not_null
           - relationships:
               arguments:
-                to: ref('stg_orders')
+                to: ref('stg_olist__orders')
                 field: order_id
       - name: payment_type
         tests:
@@ -100,7 +100,7 @@ models:
         tests:
           - not_null
           - non_negative
-  - name: stg_order_reviews
+  - name: stg_olist__order_reviews
     description: Clean order review records.
     columns:
       - name: review_id
@@ -111,7 +111,7 @@ models:
           - not_null
           - relationships:
               arguments:
-                to: ref('stg_orders')
+                to: ref('stg_olist__orders')
                 field: order_id
       - name: review_score
         tests:
@@ -120,7 +120,7 @@ models:
               arguments:
                 values: [1, 2, 3, 4, 5]
                 quote: false
-  - name: stg_orders
+  - name: stg_olist__orders
     description: Clean order records.
     columns:
       - name: order_id
@@ -132,7 +132,7 @@ models:
           - not_null
           - relationships:
               arguments:
-                to: ref('stg_customers')
+                to: ref('stg_olist__customers')
                 field: customer_id
       - name: order_status
         tests:
@@ -143,14 +143,14 @@ models:
       - name: order_purchase_timestamp
         tests:
           - not_null
-  - name: stg_products
+  - name: stg_olist__products
     description: Clean product catalog records.
     columns:
       - name: product_id
         tests:
           - not_null
           - unique
-  - name: stg_sellers
+  - name: stg_olist__sellers
     description: Clean seller records.
     columns:
       - name: seller_id
@@ -160,7 +160,7 @@ models:
       - name: seller_zip_code_prefix
         tests:
           - not_null
-  - name: stg_product_category_translation
+  - name: stg_olist__product_category_translation
     description: Portuguese to English product category mapping.
     columns:
       - name: product_category_name
@@ -170,7 +170,7 @@ models:
       - name: product_category_name_english
         tests:
           - not_null
-  - name: stg_customer_profile_changes
+  - name: stg_olist__customer_profile_changes
     description: Generated customer profile correction feed for SCD2 simulation.
     tests:
       - unique_combination_of_columns:
@@ -184,7 +184,7 @@ models:
           - not_null
           - relationships:
               arguments:
-                to: ref('stg_customers')
+                to: ref('stg_olist__customers')
                 field: customer_unique_id
       - name: effective_at
         tests:
@@ -192,7 +192,7 @@ models:
       - name: customer_state
         tests:
           - not_null
-  - name: stg_product_attribute_changes
+  - name: stg_olist__product_attribute_changes
     description: Generated product attribute correction feed for SCD2 simulation.
     tests:
       - unique_combination_of_columns:
@@ -206,7 +206,7 @@ models:
           - not_null
           - relationships:
               arguments:
-                to: ref('stg_products')
+                to: ref('stg_olist__products')
                 field: product_id
       - name: effective_at
         tests:

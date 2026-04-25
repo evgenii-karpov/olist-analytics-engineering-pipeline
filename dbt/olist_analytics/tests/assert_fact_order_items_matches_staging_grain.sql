@@ -3,8 +3,8 @@ with expected_items as (
         md5(order_items.order_id || '|' || order_items.order_item_id::varchar) as order_item_key,
         order_items.order_id,
         order_items.order_item_id
-    from {{ ref('stg_order_items') }} as order_items
-    inner join {{ ref('stg_orders') }} as orders
+    from {{ ref('stg_olist__order_items') }} as order_items
+    inner join {{ ref('stg_olist__orders') }} as orders
         on order_items.order_id = orders.order_id
 ),
 

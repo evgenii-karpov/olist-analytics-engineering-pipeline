@@ -9,7 +9,7 @@ with customers_ranked as (
             partition by customer_unique_id
             order by _loaded_at desc, customer_id desc
         ) as row_number
-    from {{ ref('stg_customers') }}
+    from {{ ref('stg_olist__customers') }}
 ),
 
 base_customers as (
@@ -36,7 +36,7 @@ corrections_ranked as (
             partition by customer_unique_id
             order by effective_at desc, _loaded_at desc
         ) as row_number
-    from {{ ref('stg_customer_profile_changes') }}
+    from {{ ref('stg_olist__customer_profile_changes') }}
     where effective_at <= '{{ var("batch_date", "9999-12-31") }}'::timestamp
 ),
 

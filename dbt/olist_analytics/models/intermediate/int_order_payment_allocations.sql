@@ -8,14 +8,14 @@ with order_item_amounts as (
         sum(price + freight_value) over (
             partition by order_id
         ) as order_gross_amount
-    from {{ ref('stg_order_items') }}
+    from {{ ref('stg_olist__order_items') }}
 ),
 
 order_payments as (
     select
         order_id,
         sum(payment_value) as order_payment_value
-    from {{ ref('stg_order_payments') }}
+    from {{ ref('stg_olist__order_payments') }}
     group by order_id
 )
 

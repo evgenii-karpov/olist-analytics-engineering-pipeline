@@ -1,13 +1,13 @@
 with item_orders as (
     select distinct order_id
-    from {{ ref('stg_order_items') }}
+    from {{ ref('stg_olist__order_items') }}
 ),
 
 payment_totals as (
     select
         payments.order_id,
         sum(payments.payment_value) as order_payment_value
-    from {{ ref('stg_order_payments') }} as payments
+    from {{ ref('stg_olist__order_payments') }} as payments
     inner join item_orders
         on payments.order_id = item_orders.order_id
     group by payments.order_id

@@ -4,4 +4,4 @@ select
     seller_zip_code_prefix,
     seller_city,
     seller_state
-from {{ ref('stg_sellers') }}
+from {{ ref('stg_olist__sellers') }}

@@ -1,30 +1,30 @@
 with date_spine as (
     select distinct order_purchase_timestamp::date as date_day
-    from {{ ref('stg_orders') }}
+    from {{ ref('stg_olist__orders') }}
     where order_purchase_timestamp is not null
 
     union
 
     select distinct order_approved_at::date as date_day
-    from {{ ref('stg_orders') }}
+    from {{ ref('stg_olist__orders') }}
     where order_approved_at is not null
 
     union
 
     select distinct order_delivered_carrier_date::date as date_day
-    from {{ ref('stg_orders') }}
+    from {{ ref('stg_olist__orders') }}
     where order_delivered_carrier_date is not null
 
     union
 
     select distinct order_delivered_customer_date::date as date_day
-    from {{ ref('stg_orders') }}
+    from {{ ref('stg_olist__orders') }}
     where order_delivered_customer_date is not null
 
     union
 
     select distinct order_estimated_delivery_date::date as date_day
-    from {{ ref('stg_orders') }}
+    from {{ ref('stg_olist__orders') }}
     where order_estimated_delivery_date is not null
 )
 

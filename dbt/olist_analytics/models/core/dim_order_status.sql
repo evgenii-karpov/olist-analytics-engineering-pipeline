@@ -5,6 +5,6 @@ select
     coalesce(order_status in ('canceled', 'unavailable'), false) as is_failed_status
 from (
     select distinct order_status
-    from {{ ref('stg_orders') }}
+    from {{ ref('stg_olist__orders') }}
     where order_status is not null
 ) as statuses

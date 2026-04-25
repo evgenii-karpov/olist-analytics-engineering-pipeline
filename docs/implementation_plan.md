@@ -184,15 +184,15 @@ Create typed, cleaned staging views over raw tables.
 
 Deliverables:
 
-- `stg_customers`
-- `stg_orders`
-- `stg_order_items`
-- `stg_order_payments`
-- `stg_order_reviews`
-- `stg_products`
-- `stg_sellers`
-- `stg_geolocation`
-- `stg_product_category_translation`
+- `stg_olist__customers`
+- `stg_olist__orders`
+- `stg_olist__order_items`
+- `stg_olist__order_payments`
+- `stg_olist__order_reviews`
+- `stg_olist__products`
+- `stg_olist__sellers`
+- `stg_olist__geolocation`
+- `stg_olist__product_category_translation`
 - Source and staging tests.
 
 ## Phase 7: SCD2 Snapshots
