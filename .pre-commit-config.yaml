@@ -9,12 +9,10 @@ repos:
       - id: ruff-format
         types_or: [python, pyi]
 
-  - repo: https://github.com/sqlfluff/sqlfluff
-    rev: 4.1.0
+  - repo: local
     hooks:
       - id: sqlfluff-lint
+        name: sqlfluff-lint
+        entry: uv run sqlfluff lint
+        language: system
         files: ^dbt/olist_analytics/(analyses|macros|models|snapshots|tests)/.*\.sql$
-        additional_dependencies:
-          - dbt-postgres>=1.8,<2
-          - dbt-redshift>=1.8,<2
-          - sqlfluff-templater-dbt==4.1.0
