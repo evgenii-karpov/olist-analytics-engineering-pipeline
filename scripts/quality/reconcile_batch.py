@@ -72,10 +72,7 @@ def postgres_connection(args: argparse.Namespace) -> PgConnection:
 
 def load_expected_source_rows(profile_path: Path) -> dict[str, int]:
     profile = json.loads(profile_path.read_text(encoding="utf-8"))
-    return {
-        entity["entity_name"]: int(entity["row_count"])
-        for entity in profile
-    }
+    return {entity["entity_name"]: int(entity["row_count"]) for entity in profile}
 
 
 def count_raw_rows(
@@ -83,9 +80,9 @@ def count_raw_rows(
     spec: RawLoadSpec,
     batch_id: str,
 ) -> int:
-    count_statement = sql.SQL(
-        "select count(*) from {}.{} where _batch_id = %s"
-    ).format(sql.Identifier("raw"), sql.Identifier(spec.entity_name))
+    count_statement = sql.SQL("select count(*) from {}.{} where _batch_id = %s").format(
+        sql.Identifier("raw"), sql.Identifier(spec.entity_name)
+    )
     with connection.cursor() as cursor:
         cursor.execute(count_statement, (batch_id,))
         return int(cursor.fetchone()[0])
@@ -281,8 +278,7 @@ def reconcile_batch(
     manifest_entries = load_dead_letter_manifest_entries(raw_dir)
     expected_source_rows = load_expected_source_rows(profile_path)
     raw_counts = {
-        spec.entity_name: count_raw_rows(connection, spec, batch_id)
-        for spec in specs
+        spec.entity_name: count_raw_rows(connection, spec, batch_id) for spec in specs
     }
     replay_counts = {
         spec.entity_name: count_replayed_rows(connection, spec.entity_name, batch_id)
@@ -314,9 +310,13 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=int(os.environ.get("POSTGRES_PORT", "5432")),
     )
-    parser.add_argument("--database", default=os.environ.get("POSTGRES_DB", "olist_analytics"))
+    parser.add_argument(
+        "--database", default=os.environ.get("POSTGRES_DB", "olist_analytics")
+    )
     parser.add_argument("--user", default=os.environ.get("POSTGRES_USER", "olist"))
-    parser.add_argument("--password", default=os.environ.get("POSTGRES_PASSWORD", "olist"))
+    parser.add_argument(
+        "--password", default=os.environ.get("POSTGRES_PASSWORD", "olist")
+    )
     return parser.parse_args()
 
 

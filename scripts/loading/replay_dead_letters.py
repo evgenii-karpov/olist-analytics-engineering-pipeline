@@ -8,11 +8,12 @@ import gzip
 import io
 import os
 import sys
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator, TextIO
+from typing import TextIO
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -152,7 +153,9 @@ def build_replay_payload(
         writer.writerow(replay_row)
 
     if validation_failures:
-        joined_failures = "\n".join(f"- {failure}" for failure in validation_failures[:20])
+        joined_failures = "\n".join(
+            f"- {failure}" for failure in validation_failures[:20]
+        )
         raise ValueError(
             "Corrected dead-letter file still contains invalid rows:\n"
             f"{joined_failures}"
@@ -350,9 +353,13 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=int(os.environ.get("POSTGRES_PORT", "5432")),
     )
-    parser.add_argument("--database", default=os.environ.get("POSTGRES_DB", "olist_analytics"))
+    parser.add_argument(
+        "--database", default=os.environ.get("POSTGRES_DB", "olist_analytics")
+    )
     parser.add_argument("--user", default=os.environ.get("POSTGRES_USER", "olist"))
-    parser.add_argument("--password", default=os.environ.get("POSTGRES_PASSWORD", "olist"))
+    parser.add_argument(
+        "--password", default=os.environ.get("POSTGRES_PASSWORD", "olist")
+    )
     return parser.parse_args()
 
 

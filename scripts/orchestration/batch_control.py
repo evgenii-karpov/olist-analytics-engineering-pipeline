@@ -16,7 +16,6 @@ if str(PROJECT_ROOT) not in sys.path:
 import psycopg2
 from psycopg2.extensions import connection as PgConnection
 
-
 STATUS_ORDER = {
     "STARTED": 0,
     "SOURCE_VALIDATED": 10,
@@ -286,9 +285,13 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=int(os.environ.get("POSTGRES_PORT", "5432")),
     )
-    parser.add_argument("--database", default=os.environ.get("POSTGRES_DB", "olist_analytics"))
+    parser.add_argument(
+        "--database", default=os.environ.get("POSTGRES_DB", "olist_analytics")
+    )
     parser.add_argument("--user", default=os.environ.get("POSTGRES_USER", "olist"))
-    parser.add_argument("--password", default=os.environ.get("POSTGRES_PASSWORD", "olist"))
+    parser.add_argument(
+        "--password", default=os.environ.get("POSTGRES_PASSWORD", "olist")
+    )
     return parser.parse_args()
 
 

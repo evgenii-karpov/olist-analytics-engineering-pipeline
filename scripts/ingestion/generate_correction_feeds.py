@@ -26,18 +26,17 @@ from scripts.ingestion.correction_specs import (
     FeedSpec,
 )
 from scripts.ingestion.local_storage import render_manifest
-from scripts.ingestion.record_validation import (
-    DeadLetterThreshold,
-    assert_dead_letter_thresholds,
-)
 from scripts.ingestion.raw_files import (
     PreparedFile,
     clean_entity_run_dirs,
     utc_now_string,
     write_validated_rows,
 )
+from scripts.ingestion.record_validation import (
+    DeadLetterThreshold,
+    assert_dead_letter_thresholds,
+)
 from scripts.ingestion.s3_storage import upload_files_to_s3
-
 
 SOURCE_SYSTEM = "olist_corrections"
 
@@ -135,7 +134,8 @@ def filter_visible_corrections(
     return [
         row
         for row in rows
-        if datetime.strptime(row["effective_at"], "%Y-%m-%d %H:%M:%S") <= batch_timestamp
+        if datetime.strptime(row["effective_at"], "%Y-%m-%d %H:%M:%S")
+        <= batch_timestamp
     ]
 
 

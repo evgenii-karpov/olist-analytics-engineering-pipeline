@@ -4,9 +4,9 @@ import csv
 import shutil
 import unittest
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from scripts.ingestion.local_storage import render_manifest
@@ -17,10 +17,13 @@ from scripts.ingestion.record_validation import (
     assert_dead_letter_thresholds,
 )
 from scripts.loading.load_raw_to_postgres import load_dead_letter_manifest_entries
-from scripts.quality.reconcile_batch import ReconciliationInput, evaluate_reconciliation, fail_if_mismatched
+from scripts.quality.reconcile_batch import (
+    ReconciliationInput,
+    evaluate_reconciliation,
+    fail_if_mismatched,
+)
 from scripts.utilities.create_dead_letter_demo_archive import create_demo_archive
 from scripts.utilities.validate_source_contract import load_contract, validate_archive
-
 
 FIXTURE_ROOT = Path("tests") / "fixtures" / "olist_small"
 FIXTURE_ARCHIVE = FIXTURE_ROOT / "olist_small.zip"
@@ -82,7 +85,9 @@ class FixtureDeadLetterFailureTests(unittest.TestCase):
             self.assertEqual(payment_entry.total_rows, 14)
             self.assertEqual(payment_entry.valid_rows, 13)
             self.assertEqual(payment_entry.failed_rows, 1)
-            self.assertIn("payment_value: invalid decimal", payment_entry.reason_summary)
+            self.assertIn(
+                "payment_value: invalid decimal", payment_entry.reason_summary
+            )
 
             with self.assertRaisesRegex(
                 DeadLetterThresholdExceeded,
@@ -119,11 +124,14 @@ def write_archive_with_removed_column(
     member_name: str,
     removed_column: str,
 ) -> None:
-    with ZipFile(source_archive) as source_zip, ZipFile(
-        output_archive,
-        "w",
-        compression=ZIP_DEFLATED,
-    ) as output_zip:
+    with (
+        ZipFile(source_archive) as source_zip,
+        ZipFile(
+            output_archive,
+            "w",
+            compression=ZIP_DEFLATED,
+        ) as output_zip,
+    ):
         for source_info in source_zip.infolist():
             content = source_zip.read(source_info.filename)
             if source_info.filename != member_name:
@@ -135,9 +143,7 @@ def write_archive_with_removed_column(
                 raise AssertionError(f"Expected rows in {member_name}")
 
             fieldnames = [
-                fieldname
-                for fieldname in rows[0].keys()
-                if fieldname != removed_column
+                fieldname for fieldname in rows[0] if fieldname != removed_column
             ]
             buffer = csv_string(fieldnames, rows)
             output_zip.writestr(member_name, buffer)

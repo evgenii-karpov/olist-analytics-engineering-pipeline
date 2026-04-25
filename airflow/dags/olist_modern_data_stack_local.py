@@ -13,8 +13,9 @@ from pathlib import Path
 
 from airflow import DAG  # pyright: ignore[reportMissingImports]
 from airflow.operators.bash import BashOperator  # pyright: ignore[reportMissingImports]
-from airflow.operators.empty import EmptyOperator  # pyright: ignore[reportMissingImports]
-
+from airflow.operators.empty import (
+    EmptyOperator,  # pyright: ignore[reportMissingImports]
+)
 
 DAG_ID = "olist_modern_data_stack_local"
 PROJECT_ROOT = Path(

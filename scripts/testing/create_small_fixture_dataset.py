@@ -14,7 +14,6 @@ from decimal import Decimal
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_ROOT = PROJECT_ROOT / "tests" / "fixtures" / "olist_small"
 SOURCE_DIR = FIXTURE_ROOT / "source"
@@ -103,7 +102,11 @@ SOURCE_FILES = [
     ("olist_orders_dataset.csv", "orders", ORDER_COLUMNS),
     ("olist_products_dataset.csv", "products", PRODUCT_COLUMNS),
     ("olist_sellers_dataset.csv", "sellers", SELLER_COLUMNS),
-    ("product_category_name_translation.csv", "product_category_translation", TRANSLATION_COLUMNS),
+    (
+        "product_category_name_translation.csv",
+        "product_category_translation",
+        TRANSLATION_COLUMNS,
+    ),
 ]
 
 RAW_TYPES = {
@@ -148,7 +151,6 @@ RAW_TYPES = {
     "product_length_cm": "integer",
     "product_height_cm": "integer",
     "product_width_cm": "integer",
-    "seller_id": "varchar(256)",
     "seller_zip_code_prefix": "varchar(16)",
     "seller_city": "varchar(256)",
     "seller_state": "varchar(256)",

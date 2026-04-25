@@ -7,10 +7,10 @@ import gzip
 import json
 import os
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterable
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -60,7 +60,9 @@ def postgres_connection(args: argparse.Namespace) -> PgConnection:
 
 def load_specs(profile_path: Path) -> list[RawLoadSpec]:
     source_specs = [
-        RawLoadSpec(entity_name=entity.entity_name, file_name=f"{entity.entity_name}.csv.gz")
+        RawLoadSpec(
+            entity_name=entity.entity_name, file_name=f"{entity.entity_name}.csv.gz"
+        )
         for entity in load_source_entities(profile_path)
     ]
     correction_specs = [
@@ -131,9 +133,11 @@ def copy_file_to_raw_table(
         "copy {}.{} from stdin with (format csv, header true)"
     ).format(sql.Identifier("raw"), sql.Identifier(spec.entity_name))
 
-    with gzip.open(source_path, mode="rt", encoding="utf-8", newline="") as raw_file:
-        with connection.cursor() as cursor:
-            cursor.copy_expert(copy_statement.as_string(connection), raw_file)
+    with (
+        gzip.open(source_path, mode="rt", encoding="utf-8", newline="") as raw_file,
+        connection.cursor() as cursor,
+    ):
+        cursor.copy_expert(copy_statement.as_string(connection), raw_file)
 
 
 def record_success(
@@ -280,7 +284,9 @@ def record_failure(
                 run_id,
                 batch_id,
                 spec.entity_name,
-                source_path.resolve().as_uri() if source_path.exists() else str(source_path),
+                source_path.resolve().as_uri()
+                if source_path.exists()
+                else str(source_path),
                 f"raw.{spec.entity_name}",
                 started_at,
                 str(error)[:65535],
@@ -298,13 +304,15 @@ def load_one_spec(
     run_id: str,
     dead_letter_entry: DeadLetterManifestEntry | None,
 ) -> None:
-    source_path = raw_file_path(raw_dir, spec.entity_name, batch_date, run_id, spec.file_name)
+    source_path = raw_file_path(
+        raw_dir, spec.entity_name, batch_date, run_id, spec.file_name
+    )
     started_at = utc_now()
     try:
         with connection.cursor() as cursor:
-            delete_statement = sql.SQL(
-                "delete from {}.{} where _batch_id = %s"
-            ).format(sql.Identifier("raw"), sql.Identifier(spec.entity_name))
+            delete_statement = sql.SQL("delete from {}.{} where _batch_id = %s").format(
+                sql.Identifier("raw"), sql.Identifier(spec.entity_name)
+            )
             cursor.execute(delete_statement, (batch_id,))
             cursor.execute(
                 """
@@ -368,10 +376,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dag-id")
     parser.add_argument("--disable-batch-control", action="store_true")
     parser.add_argument("--host", default=os.environ.get("POSTGRES_HOST", "localhost"))
-    parser.add_argument("--port", type=int, default=int(os.environ.get("POSTGRES_PORT", "5432")))
-    parser.add_argument("--database", default=os.environ.get("POSTGRES_DB", "olist_analytics"))
+    parser.add_argument(
+        "--port", type=int, default=int(os.environ.get("POSTGRES_PORT", "5432"))
+    )
+    parser.add_argument(
+        "--database", default=os.environ.get("POSTGRES_DB", "olist_analytics")
+    )
     parser.add_argument("--user", default=os.environ.get("POSTGRES_USER", "olist"))
-    parser.add_argument("--password", default=os.environ.get("POSTGRES_PASSWORD", "olist"))
+    parser.add_argument(
+        "--password", default=os.environ.get("POSTGRES_PASSWORD", "olist")
+    )
     return parser.parse_args()
 
 

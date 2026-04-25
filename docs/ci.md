@@ -7,6 +7,10 @@ instead of becoming one large opaque pipeline failure.
 ## Workflow
 
 ```text
+python-lint
+  -> Ruff linting, Ruff formatting, and the same pre-commit hooks developers
+     run locally.
+
 python-unit
   -> Python syntax, source contract fixture validation, unit tests,
      and targeted negative data-quality tests.
@@ -47,6 +51,9 @@ uv run python scripts\testing\create_small_fixture_dataset.py
 Fast checks:
 
 ```powershell
+uv run ruff check airflow\dags scripts tests
+uv run ruff format --check airflow\dags scripts tests
+uv run pre-commit run --all-files
 uv run python -m compileall airflow\dags scripts tests
 uv run python scripts\utilities\validate_source_contract.py `
   --archive tests\fixtures\olist_small\olist_small.zip `

@@ -11,12 +11,11 @@ import csv
 import json
 import math
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable
 from zipfile import ZipFile
-
 
 EXPECTED_FILES = {
     "olist_customers_dataset.csv": "customers",
@@ -158,7 +157,10 @@ def profile_csv(zip_file: ZipFile, file_name: str, entity_name: str) -> FileProf
                 value = value.strip()
                 profile.non_null_count += 1
 
-                if len(profile.sample_values) < 3 and value not in profile.sample_values:
+                if (
+                    len(profile.sample_values) < 3
+                    and value not in profile.sample_values
+                ):
                     profile.sample_values.append(value)
 
                 if len(sampled_values[column_name]) < 1000:
@@ -257,9 +259,7 @@ def render_contract(profiles: list[FileProfile], archive_path: Path) -> str:
         rows = []
         for column in profile.columns:
             null_pct = (
-                column.null_count / profile.row_count * 100
-                if profile.row_count
-                else 0
+                column.null_count / profile.row_count * 100 if profile.row_count else 0
             )
             rows.append(
                 [
@@ -306,8 +306,16 @@ def render_contract(profiles: list[FileProfile], archive_path: Path) -> str:
                 [
                     ["`_batch_id`", "varchar(128)", "Deterministic batch identifier."],
                     ["`_loaded_at`", "timestamp", "Warehouse load timestamp."],
-                    ["`_source_file`", "varchar(512)", "Original S3 object or source file."],
-                    ["`_source_system`", "varchar(64)", "Source system name, initially `olist_kaggle`."],
+                    [
+                        "`_source_file`",
+                        "varchar(512)",
+                        "Original S3 object or source file.",
+                    ],
+                    [
+                        "`_source_system`",
+                        "varchar(64)",
+                        "Source system name, initially `olist_kaggle`.",
+                    ],
                 ],
             ),
             "",

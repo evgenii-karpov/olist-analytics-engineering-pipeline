@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 from scripts.ingestion.raw_files import PreparedFile
 
@@ -37,7 +37,9 @@ def upload_files_to_s3(
         print(f"Uploaded s3://{bucket}/{s3_key}")
 
         if prepared_file.dead_letter_path and prepared_file.dead_letter_relative_path:
-            dead_letter_key = s3_key_for(prefix, prepared_file.dead_letter_relative_path)
+            dead_letter_key = s3_key_for(
+                prefix, prepared_file.dead_letter_relative_path
+            )
             s3_client.upload_file(
                 str(prepared_file.dead_letter_path),
                 bucket,

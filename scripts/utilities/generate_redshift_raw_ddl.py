@@ -6,7 +6,6 @@ import argparse
 import json
 from pathlib import Path
 
-
 METADATA_COLUMNS = [
     ("_batch_id", "varchar(128)", "not null"),
     ("_loaded_at", "timestamp", "not null"),
@@ -156,10 +155,18 @@ def render_copy_template(profile: list[dict]) -> str:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--profile", default="docs/source_profile.json")
-    parser.add_argument("--schemas-output", default="infra/redshift/001_create_schemas.sql")
-    parser.add_argument("--raw-output", default="infra/redshift/002_create_raw_tables.sql")
-    parser.add_argument("--audit-output", default="infra/redshift/003_create_audit_tables.sql")
-    parser.add_argument("--copy-output", default="infra/redshift/004_copy_raw_tables_template.sql")
+    parser.add_argument(
+        "--schemas-output", default="infra/redshift/001_create_schemas.sql"
+    )
+    parser.add_argument(
+        "--raw-output", default="infra/redshift/002_create_raw_tables.sql"
+    )
+    parser.add_argument(
+        "--audit-output", default="infra/redshift/003_create_audit_tables.sql"
+    )
+    parser.add_argument(
+        "--copy-output", default="infra/redshift/004_copy_raw_tables_template.sql"
+    )
     return parser.parse_args()
 
 

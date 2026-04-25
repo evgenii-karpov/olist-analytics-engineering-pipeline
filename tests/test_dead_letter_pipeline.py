@@ -6,10 +6,10 @@ import json
 import shutil
 import unittest
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Iterator
 from zipfile import ZipFile
 
 from scripts.ingestion.local_storage import render_manifest
@@ -96,7 +96,9 @@ class RecordValidationTests(unittest.TestCase):
 
 
 class RawDeadLetterFileTests(unittest.TestCase):
-    def test_write_validated_rows_splits_bad_rows_and_manifest_is_loadable(self) -> None:
+    def test_write_validated_rows_splits_bad_rows_and_manifest_is_loadable(
+        self,
+    ) -> None:
         with temporary_workspace_directory() as tmpdir:
             output_dir = Path(tmpdir)
             prepared_file = write_validated_rows(
@@ -176,7 +178,9 @@ class RawDeadLetterFileTests(unittest.TestCase):
 
 
 class DeadLetterReplayTests(unittest.TestCase):
-    def test_replay_payload_revalidates_fixed_rows_and_sets_replay_metadata(self) -> None:
+    def test_replay_payload_revalidates_fixed_rows_and_sets_replay_metadata(
+        self,
+    ) -> None:
         spec = ReplaySpec(
             entity_name="order_payments",
             columns=["payment_id", "payment_value"],
@@ -271,7 +275,9 @@ class BatchControlTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Cannot move batch backwards"):
             validate_transition("RAW_RECONCILED", "RAW_LOADED")
 
-        with self.assertRaisesRegex(ValueError, "Cannot move batch from terminal status"):
+        with self.assertRaisesRegex(
+            ValueError, "Cannot move batch from terminal status"
+        ):
             validate_transition("TESTED", "RAW_LOADED")
 
     def test_manifest_uris_are_optional_and_detect_existing_manifests(self) -> None:
@@ -326,10 +332,14 @@ class ReconciliationTests(unittest.TestCase):
 
         self.assertEqual(result.status, "FAIL")
         self.assertIn("source_to_prepared_count_mismatch", result.failed_checks or "")
-        self.assertIn("valid_plus_dead_letter_count_mismatch", result.failed_checks or "")
+        self.assertIn(
+            "valid_plus_dead_letter_count_mismatch", result.failed_checks or ""
+        )
         self.assertIn("prepared_to_loaded_count_mismatch", result.failed_checks or "")
 
-    def test_build_reconciliation_results_uses_manifest_totals_for_corrections(self) -> None:
+    def test_build_reconciliation_results_uses_manifest_totals_for_corrections(
+        self,
+    ) -> None:
         specs = [
             SimpleNamespace(entity_name="customer_profile_changes"),
         ]

@@ -16,3 +16,36 @@ dependencies = [
 [tool.uv]
 package = false
 required-version = ">=0.11.0"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+src = ["airflow/dags", "scripts", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "AIR"]
+ignore = [
+    # Let the formatter handle line wrapping where it can. Long CLI strings,
+    # SQL snippets, and Airflow commands stay readable as explicit exceptions.
+    "E501",
+    # The project currently targets Airflow 2.10.5. Keep Airflow 3 migration
+    # warnings visible as a future upgrade task, not as a present lint failure.
+    "AIR311",
+    "AIR312",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"airflow/dags/*.py" = [
+    # DAG files intentionally instantiate operators at module import time.
+    "B008",
+]
+"scripts/**/*.py" = [
+    # CLI scripts bootstrap the repository root onto sys.path before local imports.
+    "E402",
+]
+
+[dependency-groups]
+lint = [
+    "pre-commit>=4.6.0",
+    "ruff>=0.15.12",
+]

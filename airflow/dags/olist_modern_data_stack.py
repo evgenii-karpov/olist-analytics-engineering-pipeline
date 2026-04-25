@@ -7,12 +7,21 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from airflow import DAG  # pyright: ignore[reportMissingImports,reportMissingModuleSource]
-from airflow.exceptions import AirflowException  # pyright: ignore[reportMissingImports,reportMissingModuleSource]
-from airflow.operators.bash import BashOperator  # pyright: ignore[reportMissingImports,reportMissingModuleSource]
-from airflow.operators.empty import EmptyOperator  # pyright: ignore[reportMissingImports,reportMissingModuleSource]
-from airflow.operators.python import PythonOperator  # pyright: ignore[reportMissingImports,reportMissingModuleSource]
-
+from airflow import (
+    DAG,  # pyright: ignore[reportMissingImports,reportMissingModuleSource]
+)
+from airflow.exceptions import (
+    AirflowException,  # pyright: ignore[reportMissingImports,reportMissingModuleSource]
+)
+from airflow.operators.bash import (
+    BashOperator,  # pyright: ignore[reportMissingImports,reportMissingModuleSource]
+)
+from airflow.operators.empty import (
+    EmptyOperator,  # pyright: ignore[reportMissingImports,reportMissingModuleSource]
+)
+from airflow.operators.python import (
+    PythonOperator,  # pyright: ignore[reportMissingImports,reportMissingModuleSource]
+)
 
 DAG_ID = "olist_modern_data_stack"
 PROJECT_ROOT = Path(
@@ -39,7 +48,7 @@ def load_entities() -> list[str]:
     return [entity["entity_name"] for entity in profile] + correction_entities
 
 
-def copy_raw_files_to_redshift(**context) -> None:
+def copy_raw_files_to_redshift_callable(**context) -> None:
     """Run Redshift COPY for every raw Olist entity."""
     try:
         import psycopg2
@@ -108,7 +117,7 @@ region '{aws_region}';
                     )
                 )
                 cursor.execute(
-                    """
+                    f"""
                     insert into audit.load_runs (
                         load_run_id,
                         batch_id,
@@ -134,7 +143,7 @@ region '{aws_region}';
                         null
                     from raw.{entity_name}
                     where _batch_id = %s;
-                    """.format(entity_name=entity_name),
+                    """,
                     (
                         run_id,
                         run_id,
@@ -231,9 +240,9 @@ with DAG(
         },
     )
 
-    copy_raw_files = PythonOperator(
+    copy_raw_files_to_redshift = PythonOperator(
         task_id="copy_raw_files_to_redshift",
-        python_callable=copy_raw_files_to_redshift,
+        python_callable=copy_raw_files_to_redshift_callable,
     )
 
     dbt_run_snapshot_inputs = BashOperator(
@@ -285,7 +294,7 @@ with DAG(
         >> validate_source_contract
         >> upload_raw_files_to_s3
         >> generate_and_upload_correction_feeds
-        >> copy_raw_files
+        >> copy_raw_files_to_redshift
         >> dbt_run_snapshot_inputs
         >> dbt_snapshot
         >> dbt_build

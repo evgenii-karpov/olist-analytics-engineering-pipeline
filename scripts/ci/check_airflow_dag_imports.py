@@ -16,7 +16,6 @@ os.environ.setdefault("AIRFLOW__LOGGING__BASE_LOG_FOLDER", "/tmp/airflow/logs")
 
 from airflow.models import DagBag
 
-
 PROJECT_ROOT = Path(os.environ.get("OLIST_PROJECT_ROOT", Path.cwd()))
 DAGS_DIR = Path(
     os.environ.get(

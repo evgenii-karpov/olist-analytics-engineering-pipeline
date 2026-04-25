@@ -16,11 +16,11 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts.ingestion.local_storage import render_manifest
+from scripts.ingestion.raw_files import prepare_entities
 from scripts.ingestion.record_validation import (
     DeadLetterThreshold,
     assert_dead_letter_thresholds,
 )
-from scripts.ingestion.raw_files import prepare_entities
 from scripts.ingestion.s3_storage import upload_files_to_s3
 
 

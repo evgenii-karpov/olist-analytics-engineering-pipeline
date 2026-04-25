@@ -16,16 +16,25 @@ from pathlib import Path
 
 import psycopg2
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DBT_PROJECT_DIR = PROJECT_ROOT / "dbt" / "olist_analytics"
-DEFAULT_ARCHIVE = PROJECT_ROOT / "tests" / "fixtures" / "olist_small" / "olist_small.zip"
+DEFAULT_ARCHIVE = (
+    PROJECT_ROOT / "tests" / "fixtures" / "olist_small" / "olist_small.zip"
+)
 DEFAULT_PROFILE = (
     PROJECT_ROOT / "tests" / "fixtures" / "olist_small" / "source_profile_small.json"
 )
 DEFAULT_RAW_DIR = PROJECT_ROOT / "data" / "ci" / "raw" / "olist_small"
 POSTGRES_SQL_DIR = PROJECT_ROOT / "infra" / "postgres"
-RESET_SCHEMAS = ("raw", "audit", "staging", "intermediate", "snapshots", "core", "marts")
+RESET_SCHEMAS = (
+    "raw",
+    "audit",
+    "staging",
+    "intermediate",
+    "snapshots",
+    "core",
+    "marts",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -59,7 +68,9 @@ def pipeline_env() -> dict[str, str]:
     return env
 
 
-def run(command: list[str], cwd: Path = PROJECT_ROOT, env: dict[str, str] | None = None) -> None:
+def run(
+    command: list[str], cwd: Path = PROJECT_ROOT, env: dict[str, str] | None = None
+) -> None:
     print(f"+ {' '.join(command)}", flush=True)
     subprocess.run(command, cwd=cwd, env=env, check=True)
 

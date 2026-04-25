@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts.ingestion.record_validation import DeadLetterThreshold
 from scripts.ingestion.raw_files import PreparedFile, utc_now_string
+from scripts.ingestion.record_validation import DeadLetterThreshold
 from scripts.ingestion.s3_storage import s3_uri_for
 
 

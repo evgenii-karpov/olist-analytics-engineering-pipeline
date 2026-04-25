@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
-
 TYPE_PATTERN = re.compile(r"^(?P<base>[a-z]+)(?:\((?P<args>[^)]+)\))?$")
 
 
@@ -67,9 +66,9 @@ def assert_dead_letter_thresholds(
         for prepared_file in prepared_files
         if (
             message := threshold.violation_message(
-                entity_name=getattr(prepared_file, "entity_name"),
-                dead_letter_rows=getattr(prepared_file, "dead_letter_row_count"),
-                total_rows=getattr(prepared_file, "total_row_count"),
+                entity_name=prepared_file.entity_name,
+                dead_letter_rows=prepared_file.dead_letter_row_count,
+                total_rows=prepared_file.total_row_count,
             )
         )
     ]

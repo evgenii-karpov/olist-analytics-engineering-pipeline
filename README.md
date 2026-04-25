@@ -97,6 +97,12 @@ After editing dependencies, refresh the lock file with:
 uv lock
 ```
 
+Install the pre-commit hooks once per clone:
+
+```powershell
+uv run pre-commit install
+```
+
 Start PostgreSQL 18 and Airflow:
 
 ```powershell
@@ -119,6 +125,14 @@ Run fast Python tests for ingestion, dead-letter, and replay logic:
 
 ```powershell
 uv run python -m unittest discover -s tests -v
+```
+
+Run Python linting and format checks:
+
+```powershell
+uv run ruff check airflow\dags scripts tests
+uv run ruff format --check airflow\dags scripts tests
+uv run pre-commit run --all-files
 ```
 
 Run the small fixture pipeline used by CI:

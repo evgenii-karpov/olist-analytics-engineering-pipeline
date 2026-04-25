@@ -13,14 +13,14 @@ import csv
 import gzip
 import json
 import shutil
+from collections.abc import Iterable
+from contextlib import ExitStack
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterable
 from zipfile import ZipFile
 
 from scripts.ingestion.record_validation import validate_row
-
 
 SOURCE_SYSTEM = "olist_kaggle"
 METADATA_COLUMNS = ["_batch_id", "_loaded_at", "_source_file", "_source_system"]
@@ -151,9 +151,7 @@ def clean_entity_run_dirs(
 def validate_archive(zip_file: ZipFile, entities: Iterable[SourceEntity]) -> None:
     archive_names = set(zip_file.namelist())
     missing_files = [
-        entity.file_name
-        for entity in entities
-        if entity.file_name not in archive_names
+        entity.file_name for entity in entities if entity.file_name not in archive_names
     ]
     if missing_files:
         raise ValueError(f"Missing expected files: {', '.join(missing_files)}")
@@ -200,7 +198,6 @@ def write_validated_rows(
         run_id,
         file_name,
     )
-    dead_letter_file = None
     dead_letter_writer = None
 
     row_count = 0
@@ -209,60 +206,61 @@ def write_validated_rows(
     reason_counts: dict[str, int] = {}
     dead_lettered_at = utc_now_string()
 
-    try:
-        with gzip.open(output_path, mode="wt", encoding="utf-8", newline="") as output_file:
-            fieldnames = [*columns, *METADATA_COLUMNS]
-            writer = csv.DictWriter(output_file, fieldnames=fieldnames)
-            writer.writeheader()
+    with ExitStack() as stack:
+        output_file = stack.enter_context(
+            gzip.open(output_path, mode="wt", encoding="utf-8", newline="")
+        )
+        fieldnames = [*columns, *METADATA_COLUMNS]
+        writer = csv.DictWriter(output_file, fieldnames=fieldnames)
+        writer.writeheader()
 
-            for source_row_number, row in rows:
-                total_row_count += 1
-                validation_errors = validate_row(row, column_types)
+        for source_row_number, row in rows:
+            total_row_count += 1
+            validation_errors = validate_row(row, column_types)
 
-                if validation_errors:
-                    if dead_letter_writer is None:
-                        dead_letter_path.parent.mkdir(parents=True, exist_ok=True)
-                        dead_letter_file = gzip.open(
+            if validation_errors:
+                if dead_letter_writer is None:
+                    dead_letter_path.parent.mkdir(parents=True, exist_ok=True)
+                    dead_letter_file = stack.enter_context(
+                        gzip.open(
                             dead_letter_path,
                             mode="wt",
                             encoding="utf-8",
                             newline="",
                         )
-                        dead_letter_writer = csv.DictWriter(
-                            dead_letter_file,
-                            fieldnames=[
-                                *columns,
-                                *METADATA_COLUMNS,
-                                *DEAD_LETTER_METADATA_COLUMNS,
-                            ],
-                        )
-                        dead_letter_writer.writeheader()
+                    )
+                    dead_letter_writer = csv.DictWriter(
+                        dead_letter_file,
+                        fieldnames=[
+                            *columns,
+                            *METADATA_COLUMNS,
+                            *DEAD_LETTER_METADATA_COLUMNS,
+                        ],
+                    )
+                    dead_letter_writer.writeheader()
 
-                    dead_letter_row = {column: row.get(column, "") for column in columns}
-                    dead_letter_row["_batch_id"] = batch_id
-                    dead_letter_row["_loaded_at"] = loaded_at
-                    dead_letter_row["_source_file"] = source_file
-                    dead_letter_row["_source_system"] = source_system
-                    dead_letter_row["_source_row_number"] = source_row_number
-                    dead_letter_row["_dead_letter_stage"] = dead_letter_stage
-                    dead_letter_row["_dead_letter_reason"] = "; ".join(validation_errors)
-                    dead_letter_row["_dead_lettered_at"] = dead_lettered_at
-                    dead_letter_writer.writerow(dead_letter_row)
+                dead_letter_row = {column: row.get(column, "") for column in columns}
+                dead_letter_row["_batch_id"] = batch_id
+                dead_letter_row["_loaded_at"] = loaded_at
+                dead_letter_row["_source_file"] = source_file
+                dead_letter_row["_source_system"] = source_system
+                dead_letter_row["_source_row_number"] = source_row_number
+                dead_letter_row["_dead_letter_stage"] = dead_letter_stage
+                dead_letter_row["_dead_letter_reason"] = "; ".join(validation_errors)
+                dead_letter_row["_dead_lettered_at"] = dead_lettered_at
+                dead_letter_writer.writerow(dead_letter_row)
 
-                    dead_letter_row_count += 1
-                    increment_reason_count(reason_counts, validation_errors)
-                    continue
+                dead_letter_row_count += 1
+                increment_reason_count(reason_counts, validation_errors)
+                continue
 
-                row = dict(row)
-                row["_batch_id"] = batch_id
-                row["_loaded_at"] = loaded_at
-                row["_source_file"] = source_file
-                row["_source_system"] = source_system
-                writer.writerow(row)
-                row_count += 1
-    finally:
-        if dead_letter_file is not None:
-            dead_letter_file.close()
+            row = dict(row)
+            row["_batch_id"] = batch_id
+            row["_loaded_at"] = loaded_at
+            row["_source_file"] = source_file
+            row["_source_system"] = source_system
+            writer.writerow(row)
+            row_count += 1
 
     return PreparedFile(
         entity_name=entity_name,
