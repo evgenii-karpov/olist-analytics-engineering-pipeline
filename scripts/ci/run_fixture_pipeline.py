@@ -274,7 +274,7 @@ def run_pipeline(args: argparse.Namespace, env: dict[str, str]) -> None:
     run(
         [
             dbt,
-            "run",
+            "build",
             "--select",
             "staging",
             "intermediate",

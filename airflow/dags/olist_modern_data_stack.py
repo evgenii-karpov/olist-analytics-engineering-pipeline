@@ -231,11 +231,11 @@ with DAG(
         python_callable=copy_raw_files_to_redshift_callable,
     )
 
-    dbt_run_snapshot_inputs = BashOperator(
-        task_id="dbt_run_snapshot_inputs",
+    dbt_build_snapshot_inputs = BashOperator(
+        task_id="dbt_build_snapshot_inputs",
         cwd=str(DBT_PROJECT_DIR),
         bash_command=(
-            "dbt run --select staging intermediate --vars "
+            "dbt build --select staging intermediate --vars "
             "'{batch_date: \"{{ params.batch_date }}\"}'"
         ),
     )
@@ -281,7 +281,7 @@ with DAG(
         >> upload_raw_files_to_s3
         >> generate_and_upload_correction_feeds
         >> copy_raw_files_to_redshift
-        >> dbt_run_snapshot_inputs
+        >> dbt_build_snapshot_inputs
         >> dbt_snapshot
         >> dbt_build
         >> dbt_test

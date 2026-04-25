@@ -124,7 +124,7 @@ $env:POSTGRES_PASSWORD = "olist"
 
 uv run dbt debug
 uv run dbt source freshness
-uv run dbt run --select staging intermediate --vars '{batch_date: "2018-09-01"}'
+uv run dbt build --select staging intermediate --vars '{batch_date: "2018-09-01"}'
 uv run dbt snapshot --vars '{batch_date: "2018-09-01"}'
 uv run dbt build --exclude resource_type:snapshot --vars '{batch_date: "2018-09-01", lookback_days: 3}'
 uv run dbt test --vars '{batch_date: "2018-09-01", lookback_days: 3}'
@@ -168,7 +168,7 @@ validate_source_contract
 prepare_raw_files
 generate_correction_feeds
 load_raw_files_to_postgres
-dbt_run_snapshot_inputs
+dbt_build_snapshot_inputs
 dbt_snapshot
 dbt_build
 dbt_test

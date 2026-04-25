@@ -112,7 +112,7 @@ generate_correction_feeds
 mark_raw_prepared
 load_raw_files_to_postgres
 reconcile_raw_load
-dbt_run_snapshot_inputs
+dbt_build_snapshot_inputs
 mark_snapshot_inputs_built
 dbt_snapshot
 mark_dbt_snapshotted

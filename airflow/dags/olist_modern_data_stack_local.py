@@ -201,11 +201,11 @@ with DAG(
         ),
     )
 
-    dbt_run_snapshot_inputs = BashOperator(
-        task_id="dbt_run_snapshot_inputs",
+    dbt_build_snapshot_inputs = BashOperator(
+        task_id="dbt_build_snapshot_inputs",
         cwd=str(DBT_PROJECT_DIR),
         bash_command=(
-            "dbt run --select staging intermediate --vars "
+            "dbt build --select staging intermediate --vars "
             "'{batch_date: \"{{ params.batch_date }}\"}'"
         ),
     )
@@ -279,7 +279,7 @@ with DAG(
         >> mark_raw_prepared
         >> load_raw_files_to_postgres
         >> reconcile_raw_load
-        >> dbt_run_snapshot_inputs
+        >> dbt_build_snapshot_inputs
         >> mark_snapshot_inputs_built
         >> dbt_snapshot
         >> mark_dbt_snapshotted
