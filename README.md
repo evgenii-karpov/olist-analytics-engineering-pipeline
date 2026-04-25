@@ -85,9 +85,18 @@ scripts/
 Create a Python environment and install project dependencies:
 
 ```powershell
-py -m venv .venv
+py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+```
+
+Python dependencies are locked with `pip-tools`. Edit direct dependencies in
+`requirements.in`, then regenerate the pinned, hash-checked lock file with
+Python 3.11:
+
+```powershell
+pip install pip-tools
+pip-compile --allow-unsafe --generate-hashes --strip-extras --output-file=requirements.txt requirements.in
 ```
 
 Start PostgreSQL 18 and Airflow:
