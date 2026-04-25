@@ -33,7 +33,6 @@ select
                 / order_item_amounts.order_gross_amount,
                 2
             )
-        else null
     end as allocated_payment_value
 from order_item_amounts
 left join order_payments

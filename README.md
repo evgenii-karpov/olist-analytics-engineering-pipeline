@@ -135,6 +135,13 @@ uv run ruff format --check airflow\dags scripts tests
 uv run pre-commit run --all-files
 ```
 
+Run dbt SQL linting:
+
+```powershell
+Copy-Item -Force dbt\olist_analytics\profiles.yml.example dbt\olist_analytics\profiles.yml
+uv run sqlfluff lint dbt\olist_analytics\models dbt\olist_analytics\snapshots dbt\olist_analytics\tests dbt\olist_analytics\analyses dbt\olist_analytics\macros
+```
+
 Run the small fixture pipeline used by CI:
 
 ```powershell

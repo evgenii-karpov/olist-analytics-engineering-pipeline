@@ -12,6 +12,7 @@ with ordered as (
 
 select *
 from ordered
-where valid_to is not null
-  and next_valid_from is not null
-  and valid_to > next_valid_from
+where
+    valid_to is not null
+    and next_valid_from is not null
+    and valid_to > next_valid_from

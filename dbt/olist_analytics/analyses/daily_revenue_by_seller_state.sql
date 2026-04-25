@@ -10,5 +10,5 @@ group by
     fact.order_purchase_timestamp::date,
     seller.seller_state
 order by
-    order_purchase_date,
+    order_purchase_date asc,
     gross_revenue desc

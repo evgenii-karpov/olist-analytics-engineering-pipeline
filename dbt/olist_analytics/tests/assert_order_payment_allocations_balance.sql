@@ -26,7 +26,7 @@ select
     payment_totals.order_payment_value,
     allocation_totals.allocated_payment_value,
     payment_totals.order_payment_value
-        - coalesce(allocation_totals.allocated_payment_value, 0) as difference
+    - coalesce(allocation_totals.allocated_payment_value, 0) as difference
 from payment_totals
 left join allocation_totals
     on payment_totals.order_id = allocation_totals.order_id

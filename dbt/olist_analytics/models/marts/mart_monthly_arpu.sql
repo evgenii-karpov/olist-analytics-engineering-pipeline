@@ -5,8 +5,9 @@ with item_facts as (
         customer_unique_id,
         coalesce(allocated_payment_value, gross_item_amount) as revenue_amount
     from {{ ref('fact_order_items') }}
-    where order_purchase_timestamp is not null
-      and customer_unique_id is not null
+    where
+        order_purchase_timestamp is not null
+        and customer_unique_id is not null
 ),
 
 customer_month as (
@@ -39,16 +40,13 @@ select
     total_revenue,
     case
         when active_customers > 0 then total_revenue / active_customers
-        else null
     end as arpu,
     orders_count,
     orders_per_customer,
     case
         when orders_count > 0 then total_revenue / orders_count
-        else null
     end as average_order_value,
     case
         when active_customers > 0 then repeat_customers::decimal(18, 6) / active_customers
-        else null
     end as repeat_customer_rate
 from monthly

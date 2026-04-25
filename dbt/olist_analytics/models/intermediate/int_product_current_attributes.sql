@@ -56,8 +56,11 @@ latest_corrections as (
 
 select
     products.product_id,
-    coalesce(latest_corrections.product_category_name, products.product_category_name) as product_category_name,
-    coalesce(latest_corrections.product_category_name_english, products.product_category_name_english) as product_category_name_english,
+    coalesce(latest_corrections.product_category_name, products.product_category_name)
+        as product_category_name,
+    coalesce(
+        latest_corrections.product_category_name_english, products.product_category_name_english
+    ) as product_category_name_english,
     products.product_name_length,
     products.product_description_length,
     products.product_photos_qty,
@@ -67,7 +70,8 @@ select
     coalesce(latest_corrections.product_width_cm, products.product_width_cm) as product_width_cm,
     latest_corrections.effective_at as latest_correction_effective_at,
     latest_corrections.change_reason as latest_change_reason,
-    greatest(products._loaded_at, coalesce(latest_corrections._loaded_at, products._loaded_at)) as _loaded_at
+    greatest(products._loaded_at, coalesce(latest_corrections._loaded_at, products._loaded_at))
+        as _loaded_at
 from products
 left join latest_corrections
     on products.product_id = latest_corrections.product_id

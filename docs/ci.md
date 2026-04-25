@@ -7,9 +7,9 @@ instead of becoming one large opaque pipeline failure.
 ## Workflow
 
 ```text
-python-lint
-  -> Ruff linting, Ruff formatting, and the same pre-commit hooks developers
-     run locally.
+lint
+  -> Ruff linting, Ruff formatting, SQLFluff dbt linting, and the same
+     pre-commit hooks developers run locally.
 
 python-unit
   -> Python syntax, source contract fixture validation, unit tests,
@@ -53,6 +53,8 @@ Fast checks:
 ```powershell
 uv run ruff check airflow\dags scripts tests
 uv run ruff format --check airflow\dags scripts tests
+Copy-Item -Force dbt\olist_analytics\profiles.yml.example dbt\olist_analytics\profiles.yml
+uv run sqlfluff lint dbt\olist_analytics\models dbt\olist_analytics\snapshots dbt\olist_analytics\tests dbt\olist_analytics\analyses dbt\olist_analytics\macros
 uv run pre-commit run --all-files
 uv run python -m compileall airflow\dags scripts tests
 uv run python scripts\utilities\validate_source_contract.py `
@@ -67,6 +69,10 @@ dbt static parse:
 cd dbt\olist_analytics
 uv run dbt parse --no-partial-parse --show-all-deprecations
 ```
+
+SQLFluff uses the dbt templater and the local PostgreSQL dbt profile. If
+`profiles.yml` is missing locally, copy it from `profiles.yml.example` before
+running SQLFluff or pre-commit.
 
 Small fixture integration:
 

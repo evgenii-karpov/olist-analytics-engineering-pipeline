@@ -48,4 +48,6 @@ ignore = [
 lint = [
     "pre-commit>=4.6.0",
     "ruff>=0.15.12",
+    "sqlfluff>=4.1.0",
+    "sqlfluff-templater-dbt>=4.1.0",
 ]

@@ -8,9 +8,18 @@ on:
       - master
 
 jobs:
-  python-lint:
-    name: Python lint and format checks
+  lint:
+    name: Code lint and format checks
     runs-on: ubuntu-latest
+
+    env:
+      DBT_PROFILES_DIR: ${{ github.workspace }}/dbt/olist_analytics
+      DBT_TARGET: local_pg
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: olist_analytics
+      POSTGRES_USER: olist
+      POSTGRES_PASSWORD: olist
 
     steps:
       - name: Check out repository
@@ -26,6 +35,10 @@ jobs:
 
       - name: Install lint dependencies
         run: uv sync --locked --group lint
+
+      - name: Prepare dbt profile
+        run: cp profiles.yml.example profiles.yml
+        working-directory: dbt/olist_analytics
 
       - name: Run pre-commit hooks
         run: uv run pre-commit run --all-files --show-diff-on-failure

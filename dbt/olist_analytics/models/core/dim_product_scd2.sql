@@ -86,7 +86,7 @@ select
     latest_change_reason,
     valid_from,
     next_valid_from as valid_to,
-    case when next_valid_from is null then true else false end as is_current,
+    coalesce(next_valid_from is null, false) as is_current,
     dbt_valid_from as snapshot_valid_from,
     dbt_valid_to as snapshot_valid_to
 from scd2_windows

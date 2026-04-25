@@ -1,0 +1,17 @@
+[sqlfluff]
+dialect = postgres
+templater = dbt
+max_line_length = 100
+sql_file_exts = .sql
+exclude_rules = references.keywords, structure.column_order
+
+[sqlfluff:templater:dbt]
+project_dir = dbt/olist_analytics
+profiles_dir = dbt/olist_analytics
+profile = olist_analytics
+target = local_pg
+dbt_skip_compilation_error = True
+
+[sqlfluff:templater:dbt:context]
+batch_date = 2018-09-01
+lookback_days = 3

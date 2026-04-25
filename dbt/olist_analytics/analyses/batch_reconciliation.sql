@@ -15,4 +15,4 @@ select
     failed_checks,
     created_at
 from audit.batch_reconciliation
-order by created_at desc, entity_name
+order by created_at desc, entity_name asc

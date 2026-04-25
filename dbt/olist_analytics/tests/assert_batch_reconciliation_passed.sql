@@ -13,5 +13,6 @@ summary as (
 
 select *
 from summary
-where reconciliation_rows = 0
-   or passed_rows <> reconciliation_rows
+where
+    reconciliation_rows = 0
+    or passed_rows <> reconciliation_rows

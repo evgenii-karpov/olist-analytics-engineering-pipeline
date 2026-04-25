@@ -26,33 +26,33 @@ with
 
 {% if is_incremental() %}
 
-incremental_reprocess_boundaries as (
-    select
-        coalesce(
+    incremental_reprocess_boundaries as (
+        select
+            coalesce(
             {{ dateadd_days(
                 'max(order_purchase_timestamp)',
                 lookback_days * -1
             ) }},
-            '1900-01-01'::timestamp
-        ) as reprocess_from
-    from {{ this }}
+                '1900-01-01'::timestamp
+            ) as reprocess_from
+        from {{ this }}
 
-    union all
+        union all
 
-    select min(effective_at) as reprocess_from
-    from {{ ref('stg_customer_profile_changes') }}
+        select min(effective_at) as reprocess_from
+        from {{ ref('stg_customer_profile_changes') }}
 
-    union all
+        union all
 
-    select min(effective_at) as reprocess_from
-    from {{ ref('stg_product_attribute_changes') }}
-),
+        select min(effective_at) as reprocess_from
+        from {{ ref('stg_product_attribute_changes') }}
+    ),
 
-incremental_reprocess_window as (
-    select min(reprocess_from) as reprocess_from
-    from incremental_reprocess_boundaries
-    where reprocess_from is not null
-),
+    incremental_reprocess_window as (
+        select min(reprocess_from) as reprocess_from
+        from incremental_reprocess_boundaries
+        where reprocess_from is not null
+    ),
 
 {% endif %}
 
@@ -62,15 +62,14 @@ orders as (
 
     {% if is_incremental() %}
         where order_purchase_timestamp >= (
-            select reprocess_from
+            select incremental_reprocess_window.reprocess_from
             from incremental_reprocess_window
         )
     {% endif %}
 ),
 
 order_items as (
-    select
-        order_items.*
+    select order_items.*
     from {{ ref('stg_order_items') }} as order_items
     inner join orders
         on order_items.order_id = orders.order_id
@@ -104,10 +103,10 @@ fact_base as (
             'orders.order_estimated_delivery_date',
             'orders.order_delivered_customer_date'
         ) }} as delivery_delay_days,
-        case
-            when orders.order_delivered_customer_date > orders.order_estimated_delivery_date then true
-            else false
-        end as is_delivered_late,
+        coalesce(
+            orders.order_delivered_customer_date > orders.order_estimated_delivery_date,
+            false
+        ) as is_delivered_late,
         orders._batch_id,
         greatest(orders._loaded_at, order_items._loaded_at) as _loaded_at
     from order_items
@@ -116,8 +115,9 @@ fact_base as (
     left join {{ ref('stg_customers') }} as customers
         on orders.customer_id = customers.customer_id
     left join {{ ref('int_order_payment_allocations') }} as payment_allocations
-        on order_items.order_id = payment_allocations.order_id
-       and order_items.order_item_id = payment_allocations.order_item_id
+        on
+            order_items.order_id = payment_allocations.order_id
+            and order_items.order_item_id = payment_allocations.order_item_id
 )
 
 select
@@ -154,13 +154,17 @@ select
     fact_base._loaded_at
 from fact_base
 left join {{ ref('dim_customer_scd2') }} as customer_dim
-    on fact_base.customer_unique_id = customer_dim.customer_unique_id
-   and fact_base.order_purchase_timestamp >= customer_dim.valid_from
-   and fact_base.order_purchase_timestamp < coalesce(customer_dim.valid_to, '9999-12-31'::timestamp)
+    on
+        fact_base.customer_unique_id = customer_dim.customer_unique_id
+        and fact_base.order_purchase_timestamp >= customer_dim.valid_from
+        and fact_base.order_purchase_timestamp
+        < coalesce(customer_dim.valid_to, '9999-12-31'::timestamp)
 left join {{ ref('dim_product_scd2') }} as product_dim
-    on fact_base.product_id = product_dim.product_id
-   and fact_base.order_purchase_timestamp >= product_dim.valid_from
-   and fact_base.order_purchase_timestamp < coalesce(product_dim.valid_to, '9999-12-31'::timestamp)
+    on
+        fact_base.product_id = product_dim.product_id
+        and fact_base.order_purchase_timestamp >= product_dim.valid_from
+        and fact_base.order_purchase_timestamp
+        < coalesce(product_dim.valid_to, '9999-12-31'::timestamp)
 left join {{ ref('dim_seller') }} as seller_dim
     on fact_base.seller_id = seller_dim.seller_id
 left join {{ ref('dim_order_status') }} as order_status_dim

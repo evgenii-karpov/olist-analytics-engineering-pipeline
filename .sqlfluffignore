@@ -1,0 +1,4 @@
+dbt/olist_analytics/target/
+dbt/olist_analytics/dbt_packages/
+dbt/olist_analytics/logs/
+dbt/olist_analytics/profiles.yml

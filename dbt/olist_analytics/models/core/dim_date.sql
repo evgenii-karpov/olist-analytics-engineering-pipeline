@@ -39,5 +39,5 @@ select
     extract(dow from date_day)::integer as day_of_week_number,
     to_char(date_day, 'YYYY-MM') as year_month,
     to_char(date_day, 'Month') as month_name,
-    case when extract(dow from date_day) in (0, 6) then true else false end as is_weekend
+    coalesce(extract(dow from date_day) in (0, 6), false) as is_weekend
 from date_spine
