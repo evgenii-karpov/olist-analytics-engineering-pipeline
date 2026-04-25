@@ -1,8 +1,26 @@
-with base_rows as (
+with products as (
+    select
+        product_id,
+        product_category_name,
+        product_weight_g,
+        product_length_cm,
+        product_height_cm,
+        product_width_cm
+    from {{ ref('stg_olist__products') }}
+),
+
+product_category_translations as (
+    select
+        product_category_name,
+        product_category_name_english
+    from {{ ref('stg_olist__product_category_translation') }}
+),
+
+base_rows as (
     select
         products.product_id,
         products.product_category_name,
-        translations.product_category_name_english,
+        product_category_translations.product_category_name_english,
         products.product_weight_g,
         products.product_length_cm,
         products.product_height_cm,
@@ -13,9 +31,11 @@ with base_rows as (
         null::timestamp as dbt_valid_from,
         null::timestamp as dbt_valid_to,
         0 as source_priority
-    from {{ ref('stg_olist__products') }} as products
-    left join {{ ref('stg_olist__product_category_translation') }} as translations
-        on products.product_category_name = translations.product_category_name
+    from products
+    left join product_category_translations
+        on
+            products.product_category_name
+            = product_category_translations.product_category_name
 ),
 
 snapshot_rows as (

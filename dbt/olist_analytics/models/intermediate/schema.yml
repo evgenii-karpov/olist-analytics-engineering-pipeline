@@ -5,19 +5,19 @@ models:
     description: Customer attributes visible as of the current dbt batch date.
     columns:
       - name: customer_unique_id
-        tests:
+        data_tests:
           - not_null
           - unique
   - name: int_product_current_attributes
     description: Product attributes visible as of the current dbt batch date.
     columns:
       - name: product_id
-        tests:
+        data_tests:
           - not_null
           - unique
   - name: int_order_payment_allocations
     description: Allocates order-level payment value to order item grain.
-    tests:
+    data_tests:
       - unique_combination_of_columns:
           arguments:
             combination_of_columns:
@@ -25,17 +25,17 @@ models:
               - order_item_id
     columns:
       - name: order_id
-        tests:
+        data_tests:
           - not_null
       - name: order_item_id
-        tests:
+        data_tests:
           - not_null
       - name: item_gross_amount
-        tests:
+        data_tests:
           - non_negative
       - name: order_gross_amount
-        tests:
+        data_tests:
           - non_negative
       - name: allocated_payment_value
-        tests:
+        data_tests:
           - non_negative

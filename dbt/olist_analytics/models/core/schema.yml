@@ -5,64 +5,64 @@ models:
     description: Date dimension based on order lifecycle dates.
     columns:
       - name: date_key
-        tests:
+        data_tests:
           - not_null
           - unique
       - name: date_day
-        tests:
+        data_tests:
           - not_null
           - unique
   - name: dim_order_status
     description: Order status reference dimension.
     columns:
       - name: order_status_key
-        tests:
+        data_tests:
           - not_null
           - unique
       - name: order_status
-        tests:
+        data_tests:
           - not_null
           - unique
   - name: dim_seller
     description: Type 1 seller dimension.
     columns:
       - name: seller_key
-        tests:
+        data_tests:
           - not_null
           - unique
       - name: seller_id
-        tests:
+        data_tests:
           - not_null
           - unique
   - name: dim_customer_scd2
     description: SCD2 customer dimension produced from dbt snapshot records.
     columns:
       - name: customer_key
-        tests:
+        data_tests:
           - not_null
           - unique
       - name: customer_unique_id
-        tests:
+        data_tests:
           - not_null
       - name: valid_from
-        tests:
+        data_tests:
           - not_null
   - name: dim_product_scd2
     description: SCD2 product dimension produced from dbt snapshot records.
     columns:
       - name: product_key
-        tests:
+        data_tests:
           - not_null
           - unique
       - name: product_id
-        tests:
+        data_tests:
           - not_null
       - name: valid_from
-        tests:
+        data_tests:
           - not_null
   - name: fact_order_items
     description: Incremental item-grain fact table with SCD2 dimension joins.
-    tests:
+    data_tests:
       - unique_combination_of_columns:
           arguments:
             combination_of_columns:
@@ -70,62 +70,62 @@ models:
               - order_item_id
     columns:
       - name: order_item_key
-        tests:
+        data_tests:
           - not_null
           - unique
       - name: order_id
-        tests:
+        data_tests:
           - not_null
       - name: order_item_id
-        tests:
+        data_tests:
           - not_null
       - name: customer_key
-        tests:
+        data_tests:
           - not_null
           - relationships:
               arguments:
                 to: ref('dim_customer_scd2')
                 field: customer_key
       - name: product_key
-        tests:
+        data_tests:
           - not_null
           - relationships:
               arguments:
                 to: ref('dim_product_scd2')
                 field: product_key
       - name: seller_key
-        tests:
+        data_tests:
           - not_null
           - relationships:
               arguments:
                 to: ref('dim_seller')
                 field: seller_key
       - name: order_status_key
-        tests:
+        data_tests:
           - not_null
           - relationships:
               arguments:
                 to: ref('dim_order_status')
                 field: order_status_key
       - name: order_purchase_date_key
-        tests:
+        data_tests:
           - not_null
           - relationships:
               arguments:
                 to: ref('dim_date')
                 field: date_key
       - name: price
-        tests:
+        data_tests:
           - not_null
           - non_negative
       - name: freight_value
-        tests:
+        data_tests:
           - not_null
           - non_negative
       - name: gross_item_amount
-        tests:
+        data_tests:
           - not_null
           - non_negative
       - name: allocated_payment_value
-        tests:
+        data_tests:
           - non_negative

@@ -2,7 +2,8 @@ version: 2
 
 sources:
   - name: olist
-    description: Raw Olist source tables loaded into the active warehouse target.
+    description: >
+      Raw Olist source tables loaded into the active warehouse target.
     database: "{{ target.database }}"
     schema: raw
     config:
@@ -19,92 +20,94 @@ sources:
         description: Customer profile records from Olist.
         columns:
           - name: customer_id
-            tests:
+            data_tests:
               - not_null
           - name: customer_unique_id
-            tests:
+            data_tests:
               - not_null
       - name: geolocation
         description: Zip-code level latitude and longitude records.
         columns:
           - name: geolocation_zip_code_prefix
-            tests:
+            data_tests:
               - not_null
       - name: order_items
-        description: Order item lines with product, seller, price, and freight values.
+        description: >
+          Order item lines with product, seller, price, and freight values.
         columns:
           - name: order_id
-            tests:
+            data_tests:
               - not_null
           - name: order_item_id
-            tests:
+            data_tests:
               - not_null
           - name: product_id
-            tests:
+            data_tests:
               - not_null
           - name: seller_id
-            tests:
+            data_tests:
               - not_null
       - name: order_payments
         description: Payments captured at order grain.
         columns:
           - name: order_id
-            tests:
+            data_tests:
               - not_null
           - name: payment_sequential
-            tests:
+            data_tests:
               - not_null
       - name: order_reviews
         description: Customer reviews at order grain.
         columns:
           - name: review_id
-            tests:
+            data_tests:
               - not_null
           - name: order_id
-            tests:
+            data_tests:
               - not_null
       - name: orders
         description: Olist order headers and lifecycle timestamps.
         columns:
           - name: order_id
-            tests:
+            data_tests:
               - not_null
           - name: customer_id
-            tests:
+            data_tests:
               - not_null
       - name: products
         description: Product catalog attributes.
         columns:
           - name: product_id
-            tests:
+            data_tests:
               - not_null
       - name: sellers
         description: Seller profile records.
         columns:
           - name: seller_id
-            tests:
+            data_tests:
               - not_null
       - name: product_category_translation
         description: Portuguese to English product category mapping.
         columns:
           - name: product_category_name
-            tests:
+            data_tests:
               - not_null
       - name: customer_profile_changes
         description: Generated customer profile corrections for SCD2 simulation.
         columns:
           - name: customer_unique_id
-            tests:
+            data_tests:
               - not_null
           - name: effective_at
-            tests:
+            data_tests:
               - not_null
       - name: product_attribute_changes
-        description: Generated product attribute corrections for SCD2 simulation.
+        description: >
+          Generated product attribute corrections for SCD2 simulation.
         columns:
           - name: product_id
-            tests:
+            data_tests:
               - not_null
           - name: effective_at
-            tests:
+            data_tests:
               - not_null

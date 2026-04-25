@@ -2,14 +2,16 @@ version: 2
 
 sources:
   - name: pipeline_audit
-    description: Pipeline control and observability tables populated outside dbt.
+    description: >
+      Pipeline control and observability tables populated outside dbt.
     database: "{{ target.database }}"
     schema: audit
     tables:
       - name: batch_runs
         description: Batch orchestration status and runtime metadata.
       - name: batch_reconciliation
-        description: Source-to-warehouse reconciliation results by batch and entity.
+        description: >
+          Source-to-warehouse reconciliation results by batch and entity.
       - name: dead_letter_events
         description: Dead-letter summary records emitted during raw validation.
       - name: dead_letter_replays

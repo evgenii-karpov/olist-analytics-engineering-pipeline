@@ -1,7 +1,8 @@
 with ranked as (
     select
         product_id::varchar(256) as product_id,
-        lower(trim(product_category_name))::varchar(256) as product_category_name,
+        lower(trim(product_category_name))::varchar(256)
+            as product_category_name,
         product_name_lenght::integer as product_name_length,
         product_description_lenght::integer as product_description_length,
         product_photos_qty::integer as product_photos_qty,

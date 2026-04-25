@@ -1,7 +1,7 @@
 [sqlfluff]
 dialect = postgres
 templater = dbt
-max_line_length = 100
+max_line_length = 80
 sql_file_exts = .sql
 exclude_rules = references.keywords, structure.column_order
 

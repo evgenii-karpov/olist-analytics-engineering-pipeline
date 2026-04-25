@@ -5,9 +5,12 @@ with ranked as (
         lower(trim(order_status))::varchar(64) as order_status,
         order_purchase_timestamp::timestamp as order_purchase_timestamp,
         order_approved_at::timestamp as order_approved_at,
-        order_delivered_carrier_date::timestamp as order_delivered_carrier_date,
-        order_delivered_customer_date::timestamp as order_delivered_customer_date,
-        order_estimated_delivery_date::timestamp as order_estimated_delivery_date,
+        order_delivered_carrier_date::timestamp
+            as order_delivered_carrier_date,
+        order_delivered_customer_date::timestamp
+            as order_delivered_customer_date,
+        order_estimated_delivery_date::timestamp
+            as order_estimated_delivery_date,
         _batch_id,
         _loaded_at,
         _source_file,

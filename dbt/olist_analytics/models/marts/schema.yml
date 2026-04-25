@@ -5,75 +5,75 @@ models:
     description: Daily revenue mart at order purchase date grain.
     columns:
       - name: order_purchase_date
-        tests:
+        data_tests:
           - not_null
           - unique
       - name: gross_revenue
-        tests:
+        data_tests:
           - not_null
           - non_negative
       - name: allocated_payment_revenue
-        tests:
+        data_tests:
           - not_null
           - non_negative
       - name: product_revenue
-        tests:
+        data_tests:
           - not_null
           - non_negative
       - name: freight_revenue
-        tests:
+        data_tests:
           - not_null
           - non_negative
       - name: orders_count
-        tests:
+        data_tests:
           - not_null
           - non_negative
       - name: customers_count
-        tests:
+        data_tests:
           - not_null
           - non_negative
       - name: items_count
-        tests:
+        data_tests:
           - not_null
           - non_negative
       - name: average_order_value
-        tests:
+        data_tests:
           - non_negative
       - name: average_paid_order_value
-        tests:
+        data_tests:
           - non_negative
       - name: late_deliveries_count
-        tests:
+        data_tests:
           - not_null
           - non_negative
   - name: mart_monthly_arpu
     description: Monthly ARPU mart at order purchase month grain.
     columns:
       - name: order_month
-        tests:
+        data_tests:
           - not_null
           - unique
       - name: active_customers
-        tests:
+        data_tests:
           - not_null
           - non_negative
       - name: total_revenue
-        tests:
+        data_tests:
           - not_null
           - non_negative
       - name: arpu
-        tests:
+        data_tests:
           - non_negative
       - name: orders_count
-        tests:
+        data_tests:
           - not_null
           - non_negative
       - name: orders_per_customer
-        tests:
+        data_tests:
           - non_negative
       - name: average_order_value
-        tests:
+        data_tests:
           - non_negative
       - name: repeat_customer_rate
-        tests:
+        data_tests:
           - non_negative

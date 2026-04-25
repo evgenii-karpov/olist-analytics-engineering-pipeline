@@ -68,6 +68,60 @@ orders as (
     {% endif %}
 ),
 
+customers as (
+    select
+        customer_id,
+        customer_unique_id
+    from {{ ref('stg_olist__customers') }}
+),
+
+payment_allocations as (
+    select
+        order_id,
+        order_item_id,
+        allocated_payment_value
+    from {{ ref('int_order_payment_allocations') }}
+),
+
+customer_dim as (
+    select
+        customer_key,
+        customer_unique_id,
+        valid_from,
+        valid_to
+    from {{ ref('dim_customer_scd2') }}
+),
+
+product_dim as (
+    select
+        product_key,
+        product_id,
+        valid_from,
+        valid_to
+    from {{ ref('dim_product_scd2') }}
+),
+
+seller_dim as (
+    select
+        seller_key,
+        seller_id
+    from {{ ref('dim_seller') }}
+),
+
+order_status_dim as (
+    select
+        order_status_key,
+        order_status
+    from {{ ref('dim_order_status') }}
+),
+
+dates as (
+    select
+        date_key,
+        date_day
+    from {{ ref('dim_date') }}
+),
+
 order_items as (
     select order_items.*
     from {{ ref('stg_olist__order_items') }} as order_items
@@ -77,7 +131,10 @@ order_items as (
 
 fact_base as (
     select
-        md5(order_items.order_id || '|' || order_items.order_item_id::varchar) as order_item_key,
+        md5(
+            order_items.order_id || '|'
+            || order_items.order_item_id::varchar
+        ) as order_item_key,
         order_items.order_id,
         order_items.order_item_id,
         orders.customer_id,
@@ -104,7 +161,8 @@ fact_base as (
             'orders.order_delivered_customer_date'
         ) }} as delivery_delay_days,
         coalesce(
-            orders.order_delivered_customer_date > orders.order_estimated_delivery_date,
+            orders.order_delivered_customer_date
+            > orders.order_estimated_delivery_date,
             false
         ) as is_delivered_late,
         orders._batch_id,
@@ -112,9 +170,9 @@ fact_base as (
     from order_items
     inner join orders
         on order_items.order_id = orders.order_id
-    left join {{ ref('stg_olist__customers') }} as customers
+    left join customers
         on orders.customer_id = customers.customer_id
-    left join {{ ref('int_order_payment_allocations') }} as payment_allocations
+    left join payment_allocations
         on
             order_items.order_id = payment_allocations.order_id
             and order_items.order_item_id = payment_allocations.order_item_id
@@ -153,27 +211,29 @@ select
     fact_base._batch_id,
     fact_base._loaded_at
 from fact_base
-left join {{ ref('dim_customer_scd2') }} as customer_dim
+left join customer_dim
     on
         fact_base.customer_unique_id = customer_dim.customer_unique_id
         and fact_base.order_purchase_timestamp >= customer_dim.valid_from
         and fact_base.order_purchase_timestamp
         < coalesce(customer_dim.valid_to, '9999-12-31'::timestamp)
-left join {{ ref('dim_product_scd2') }} as product_dim
+left join product_dim
     on
         fact_base.product_id = product_dim.product_id
         and fact_base.order_purchase_timestamp >= product_dim.valid_from
         and fact_base.order_purchase_timestamp
         < coalesce(product_dim.valid_to, '9999-12-31'::timestamp)
-left join {{ ref('dim_seller') }} as seller_dim
+left join seller_dim
     on fact_base.seller_id = seller_dim.seller_id
-left join {{ ref('dim_order_status') }} as order_status_dim
+left join order_status_dim
     on fact_base.order_status = order_status_dim.order_status
-left join {{ ref('dim_date') }} as purchase_date
+left join dates as purchase_date
     on fact_base.order_purchase_timestamp::date = purchase_date.date_day
-left join {{ ref('dim_date') }} as approved_date
+left join dates as approved_date
     on fact_base.order_approved_at::date = approved_date.date_day
-left join {{ ref('dim_date') }} as delivered_date
+left join dates as delivered_date
     on fact_base.order_delivered_customer_date::date = delivered_date.date_day
-left join {{ ref('dim_date') }} as estimated_delivery_date
-    on fact_base.order_estimated_delivery_date::date = estimated_delivery_date.date_day
+left join dates as estimated_delivery_date
+    on
+        fact_base.order_estimated_delivery_date::date
+        = estimated_delivery_date.date_day

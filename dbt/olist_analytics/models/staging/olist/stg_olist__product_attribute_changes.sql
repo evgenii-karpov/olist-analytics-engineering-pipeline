@@ -2,7 +2,8 @@ with ranked as (
     select
         product_id::varchar(256) as product_id,
         effective_at::timestamp as effective_at,
-        lower(trim(product_category_name))::varchar(256) as product_category_name,
+        lower(trim(product_category_name))::varchar(256)
+            as product_category_name,
         product_weight_g::integer as product_weight_g,
         product_length_cm::integer as product_length_cm,
         product_height_cm::integer as product_height_cm,

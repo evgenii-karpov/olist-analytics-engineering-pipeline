@@ -29,7 +29,9 @@ monthly as (
         sum(customer_revenue) as total_revenue,
         sum(customer_orders_count) as orders_count,
         avg(customer_orders_count) as orders_per_customer,
-        sum(case when customer_orders_count > 1 then 1 else 0 end) as repeat_customers
+        sum(
+            case when customer_orders_count > 1 then 1 else 0 end
+        ) as repeat_customers
     from customer_month
     group by order_month
 )
