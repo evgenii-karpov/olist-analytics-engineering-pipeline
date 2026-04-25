@@ -1,7 +1,7 @@
 select
     fact.order_purchase_timestamp::date as order_purchase_date,
     seller.seller_state,
-    sum(fact.gross_item_amount) as gross_revenue,
+    {{ round_two_decimals('sum(fact.gross_item_amount)') }} as gross_revenue,
     count(distinct fact.order_id) as orders_count
 from {{ ref('fact_order_items') }} as fact
 left join {{ ref('dim_seller') }} as seller

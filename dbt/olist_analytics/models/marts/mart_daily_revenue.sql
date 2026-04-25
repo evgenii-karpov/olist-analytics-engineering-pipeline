@@ -55,16 +55,18 @@ order_daily as (
 
 select
     item_daily.order_purchase_date,
-    item_daily.gross_revenue,
-    item_daily.allocated_payment_revenue,
-    item_daily.product_revenue,
-    item_daily.freight_revenue,
+    {{ round_two_decimals('item_daily.gross_revenue') }} as gross_revenue,
+    {{ round_two_decimals('item_daily.allocated_payment_revenue') }}
+        as allocated_payment_revenue,
+    {{ round_two_decimals('item_daily.product_revenue') }} as product_revenue,
+    {{ round_two_decimals('item_daily.freight_revenue') }} as freight_revenue,
     order_daily.orders_count,
     order_daily.customers_count,
     item_daily.items_count,
-    order_daily.average_order_value,
-    order_daily.average_paid_order_value,
-    item_daily.average_delivery_days,
+    {{ round_two_decimals('order_daily.average_order_value') }} as average_order_value,
+    {{ round_two_decimals('order_daily.average_paid_order_value') }}
+        as average_paid_order_value,
+    {{ round_two_decimals('item_daily.average_delivery_days') }} as average_delivery_days,
     item_daily.late_deliveries_count
 from item_daily
 left join order_daily

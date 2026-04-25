@@ -37,16 +37,23 @@ monthly as (
 select
     order_month,
     active_customers,
-    total_revenue,
+    {{ round_two_decimals('total_revenue') }} as total_revenue,
     case
-        when active_customers > 0 then total_revenue / active_customers
+        when active_customers > 0
+            then {{ round_two_decimals('total_revenue / active_customers') }}
     end as arpu,
     orders_count,
-    orders_per_customer,
+    {{ round_two_decimals('orders_per_customer') }} as orders_per_customer,
     case
-        when orders_count > 0 then total_revenue / orders_count
+        when orders_count > 0
+            then {{ round_two_decimals('total_revenue / orders_count') }}
     end as average_order_value,
     case
-        when active_customers > 0 then repeat_customers::decimal(18, 6) / active_customers
+        when active_customers > 0
+            then {{
+                round_two_decimals(
+                    'repeat_customers::decimal(18, 6) / active_customers'
+                )
+            }}
     end as repeat_customer_rate
 from monthly
