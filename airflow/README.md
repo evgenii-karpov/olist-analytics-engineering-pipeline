@@ -108,8 +108,8 @@ docker compose down -v
 
 Airflow is provided by the Docker image (`apache/airflow:2.10.5-python3.11`),
 not by the local Windows virtual environment. The repository includes minimal
-Pylance stubs under `typings/airflow` so VS Code can resolve DAG imports while
-the real runtime dependency remains in the Airflow container.
+Pylance stubs under `.pyright/typings/airflow` so VS Code can resolve DAG
+imports while the real runtime dependency remains in the Airflow container.
 
 ## Runtime Parameters
 

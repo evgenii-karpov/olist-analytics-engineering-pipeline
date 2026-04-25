@@ -1,9 +1,9 @@
 {
-  "stubPath": "typings",
+  "stubPath": ".pyright/typings",
   "executionEnvironments": [
     {
       "root": ".",
-      "extraPaths": ["typings"]
+      "extraPaths": [".pyright/typings"]
     }
   ],
   "reportMissingModuleSource": "none",
