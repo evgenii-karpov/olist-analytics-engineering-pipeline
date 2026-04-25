@@ -170,7 +170,7 @@ with DAG(
     description="Olist batch pipeline: S3 raw load, Redshift COPY, and dbt transformations.",
     default_args=default_args,
     start_date=datetime(2016, 9, 1),
-    schedule="@daily",
+    schedule=None,
     catchup=False,
     max_active_runs=1,
     tags=["olist", "s3", "redshift", "dbt"],
