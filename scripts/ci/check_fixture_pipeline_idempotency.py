@@ -19,6 +19,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from scripts.ci.run_fixture_pipeline import (
     DEFAULT_ARCHIVE,
+    DEFAULT_FIXTURE_BATCH_DATE,
     DEFAULT_PROFILE,
     DEFAULT_RAW_DIR,
     pipeline_env,
@@ -137,8 +138,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--archive", default=str(DEFAULT_ARCHIVE))
     parser.add_argument("--profile", default=str(DEFAULT_PROFILE))
     parser.add_argument("--raw-dir", default=str(DEFAULT_RAW_DIR))
-    parser.add_argument("--batch-date", default="2018-09-01")
-    parser.add_argument("--batch-id", default="2018-09-01")
+    parser.add_argument("--batch-date", default=DEFAULT_FIXTURE_BATCH_DATE)
+    parser.add_argument("--batch-id", default=DEFAULT_FIXTURE_BATCH_DATE)
     parser.add_argument("--initial-run-id", default="ci_fixture_initial")
     parser.add_argument("--replay-run-id", default="ci_fixture_replay")
     parser.add_argument("--dag-id", default="github_actions_fixture")

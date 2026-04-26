@@ -22,7 +22,8 @@ airflow-imports
 
 fixture-integration
   -> Small fixture end-to-end path through PostgreSQL, reconciliation, dbt
-     snapshots/build/tests, and batch-control checks.
+     snapshots/build/tests, batch-control checks, and incremental replay
+     idempotency.
 ```
 
 ## Small Fixture Dataset
@@ -39,6 +40,11 @@ The fixture is synthetic, small, and referentially consistent. It exercises real
 joins, correction feed generation, reconciliation, dbt snapshots, core models,
 marts, and tests without requiring the full Kaggle archive in CI.
 
+CI uses `DEFAULT_FIXTURE_BATCH_DATE` (`2018-09-01`) as the default fixture
+batch date. This date is intentionally after all generated customer/product
+correction `effective_at` values, so one fixture run sees the complete
+synthetic SCD2 scenario instead of needing a multi-batch backfill sequence.
+
 ## What CI Tests
 
 Happy path:
@@ -53,6 +59,8 @@ Happy path:
 - dbt snapshots;
 - dbt core and mart build;
 - dbt tests.
+- incremental replay of the same fixture batch with stable analytical output
+  fingerprints.
 
 Failure modes:
 

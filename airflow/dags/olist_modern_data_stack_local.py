@@ -25,6 +25,9 @@ LOCAL_RAW_DIR = "data/raw/olist"
 POSTGRES_SQL_DIR = "infra/postgres"
 LOCAL_RUN_ID = "{{ run_id | replace(':', '_') | replace('+', '_') }}"
 LOCAL_BATCH_ID = "{{ params.batch_date }}"
+# Runtime default for manual/demo runs. It is after all generated correction
+# feed effective dates, so one batch sees the complete synthetic SCD2 scenario.
+DEFAULT_DEMO_BATCH_DATE = "2018-09-01"
 
 
 def batch_control_command(command: str, status: str | None = None) -> str:
@@ -53,7 +56,7 @@ def mark_batch_failed(context: dict) -> None:
     task_instance = context.get("task_instance")
     task_id = getattr(task_instance, "task_id", "unknown_task")
     exception = context.get("exception")
-    batch_date = str(params.get("batch_date", "2018-09-01"))
+    batch_date = str(params.get("batch_date", DEFAULT_DEMO_BATCH_DATE))
     error_message = f"{task_id}: {exception}"[:65535]
 
     subprocess.run(
@@ -99,7 +102,7 @@ with DAG(
     max_active_runs=1,
     tags=["olist", "local", "postgres", "dbt"],
     params={
-        "batch_date": "2018-09-01",
+        "batch_date": DEFAULT_DEMO_BATCH_DATE,
         "lookback_days": 3,
         "full_refresh": False,
         "dead_letter_max_rows": 10,

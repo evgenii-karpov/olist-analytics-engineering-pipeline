@@ -25,6 +25,9 @@ DEFAULT_PROFILE = (
     PROJECT_ROOT / "tests" / "fixtures" / "olist_small" / "source_profile_small.json"
 )
 DEFAULT_RAW_DIR = PROJECT_ROOT / "data" / "ci" / "raw" / "olist_small"
+# After all generated correction effective dates, so one fixture batch sees the
+# complete synthetic SCD2 scenario without a historical backfill sequence.
+DEFAULT_FIXTURE_BATCH_DATE = "2018-09-01"
 POSTGRES_SQL_DIR = PROJECT_ROOT / "infra" / "postgres"
 RESET_SCHEMAS = (
     "raw",
@@ -42,8 +45,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--archive", default=str(DEFAULT_ARCHIVE))
     parser.add_argument("--profile", default=str(DEFAULT_PROFILE))
     parser.add_argument("--raw-dir", default=str(DEFAULT_RAW_DIR))
-    parser.add_argument("--batch-date", default="2018-09-01")
-    parser.add_argument("--batch-id", default="2018-09-01")
+    parser.add_argument("--batch-date", default=DEFAULT_FIXTURE_BATCH_DATE)
+    parser.add_argument("--batch-id", default=DEFAULT_FIXTURE_BATCH_DATE)
     parser.add_argument("--run-id", default="ci_fixture")
     parser.add_argument("--dag-id", default="github_actions_fixture")
     parser.add_argument("--lookback-days", type=int, default=3)

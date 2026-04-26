@@ -20,6 +20,9 @@ PROJECT_ROOT = Path(
 PYTHON_BIN = os.environ.get("OLIST_PYTHON_BIN", "python")
 DBT_PROJECT_DIR = PROJECT_ROOT / "dbt" / "olist_analytics"
 SOURCE_PROFILE_PATH = PROJECT_ROOT / "docs" / "source_profile.json"
+# Runtime default for manual/demo runs. It is after all generated correction
+# feed effective dates, so one batch sees the complete synthetic SCD2 scenario.
+DEFAULT_DEMO_BATCH_DATE = "2018-09-01"
 
 
 def required_env(name: str) -> str:
@@ -164,11 +167,8 @@ with DAG(
     catchup=False,
     max_active_runs=1,
     tags=["olist", "s3", "redshift", "dbt"],
-    # Runtime defaults for manual/demo runs. 2018-09-01 is after the
-    # generated correction feed effective dates, so the sample SCD2 flow
-    # has visible changes without requiring a backfill sequence.
     params={
-        "batch_date": "2018-09-01",
+        "batch_date": DEFAULT_DEMO_BATCH_DATE,
         "lookback_days": 3,
         "full_refresh": False,
     },
