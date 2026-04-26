@@ -16,6 +16,9 @@ clean-targets:
   - "target"
   - "dbt_packages"
 
+vars:
+  batch_date: "2018-09-01"
+
 models:
   olist_analytics:
     staging:
