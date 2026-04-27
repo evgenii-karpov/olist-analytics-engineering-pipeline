@@ -288,7 +288,7 @@ def olist_modern_data_stack():
         corrections_uploaded = generate_and_upload_correction_feeds()
         redshift_loaded = copy_raw_files_to_redshift()
 
-        source_validated >> [raw_uploaded, corrections_uploaded] >> redshift_loaded
+        _ = source_validated >> [raw_uploaded, corrections_uploaded] >> redshift_loaded
 
     @task_group(group_id="dbt_transformations")
     def dbt_transformations():
@@ -335,11 +335,11 @@ def olist_modern_data_stack():
             ),
         )
 
-        dbt_build_snapshot_inputs >> dbt_snapshot >> dbt_build >> dbt_test
+        _ = dbt_build_snapshot_inputs >> dbt_snapshot >> dbt_build >> dbt_test
 
     end = EmptyOperator(task_id="end")
 
-    start >> raw_ingestion() >> dbt_transformations() >> end
+    _ = start >> raw_ingestion() >> dbt_transformations() >> end
 
 
 olist_modern_data_stack()

@@ -271,8 +271,8 @@ def olist_modern_data_stack_local():
             "RAW_PREPARED"
         )
 
-        source_contract >> source_validated
-        [source_validated, raw_files, correction_feeds] >> raw_prepared
+        _ = source_contract >> source_validated
+        _ = [source_validated, raw_files, correction_feeds] >> raw_prepared
 
     @task_group(group_id="raw_load_quality")
     def raw_load_quality():
@@ -324,7 +324,7 @@ def olist_modern_data_stack_local():
                 ]
             )
 
-        load_raw_files_to_postgres() >> reconcile_raw_load()
+        _ = load_raw_files_to_postgres() >> reconcile_raw_load()
 
     @task_group(group_id="dbt_transformations")
     def dbt_transformations():
@@ -385,7 +385,7 @@ def olist_modern_data_stack_local():
 
         mark_tested = mark_batch_status.override(task_id="mark_tested")("TESTED")
 
-        (
+        _ = (
             dbt_build_snapshot_inputs
             >> mark_snapshot_inputs_built
             >> dbt_snapshot
@@ -398,7 +398,7 @@ def olist_modern_data_stack_local():
 
     end = EmptyOperator(task_id="end")
 
-    (
+    _ = (
         start
         >> start_batch()
         >> raw_preparation()
