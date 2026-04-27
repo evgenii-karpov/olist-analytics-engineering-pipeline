@@ -5,13 +5,15 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+from collections.abc import Mapping
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 
-from airflow.exceptions import AirflowException
 from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import Param, dag, get_current_context, task, task_group
+from airflow.sdk.exceptions import AirflowException
 
 DAG_ID = "olist_modern_data_stack"
 
@@ -59,6 +61,21 @@ def load_entities() -> list[str]:
 
 def run_project_command(command: list[str]) -> None:
     subprocess.run(command, cwd=str(PROJECT_ROOT), check=True)
+
+
+def current_s3_batch_context() -> tuple[Mapping[str, Any], str, str]:
+    context = get_current_context()
+    params = context.get("params")
+    ds_nodash = context.get("ds_nodash")
+    run_id = context.get("run_id")
+    if not isinstance(params, Mapping):
+        raise AirflowException("Airflow task context is missing params")
+    if ds_nodash is None:
+        raise AirflowException("Airflow task context is missing ds_nodash")
+    if run_id is None:
+        raise AirflowException("Airflow task context is missing run_id")
+
+    return params, str(ds_nodash), str(run_id)
 
 
 def copy_raw_files_to_redshift_callable(**context) -> None:
@@ -231,8 +248,7 @@ def olist_modern_data_stack():
 
         @task
         def upload_raw_files_to_s3() -> None:
-            context = get_current_context()
-            params = context["params"]
+            params, ds_nodash, run_id = current_s3_batch_context()
             run_project_command(
                 [
                     PYTHON_BIN,
@@ -242,11 +258,11 @@ def olist_modern_data_stack():
                     "--profile",
                     "docs/source_profile.json",
                     "--output-dir",
-                    f"data/prepared/{context['ds_nodash']}",
+                    f"data/prepared/{ds_nodash}",
                     "--batch-date",
                     str(params["batch_date"]),
                     "--run-id",
-                    str(context["run_id"]),
+                    run_id,
                     "--s3-bucket",
                     required_env("OLIST_S3_BUCKET"),
                     "--s3-prefix",
@@ -257,8 +273,7 @@ def olist_modern_data_stack():
 
         @task
         def generate_and_upload_correction_feeds() -> None:
-            context = get_current_context()
-            params = context["params"]
+            params, ds_nodash, run_id = current_s3_batch_context()
             run_project_command(
                 [
                     PYTHON_BIN,
@@ -266,11 +281,11 @@ def olist_modern_data_stack():
                     "--archive",
                     "olist.zip",
                     "--output-dir",
-                    f"data/prepared/{context['ds_nodash']}",
+                    f"data/prepared/{ds_nodash}",
                     "--batch-date",
                     str(params["batch_date"]),
                     "--run-id",
-                    str(context["run_id"]),
+                    run_id,
                     "--s3-bucket",
                     required_env("OLIST_S3_BUCKET"),
                     "--s3-prefix",
