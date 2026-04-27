@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from airflow.exceptions import AirflowException
 from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.standard.operators.empty import EmptyOperator
-from airflow.providers.standard.operators.python import PythonOperator
-from airflow.sdk import Param, dag, task_group
+from airflow.sdk import Param, dag, get_current_context, task, task_group
 
 DAG_ID = "olist_modern_data_stack"
 
@@ -55,6 +55,10 @@ def load_entities() -> list[str]:
         "product_attribute_changes",
     ]
     return [entity["entity_name"] for entity in profile] + correction_entities
+
+
+def run_project_command(command: list[str]) -> None:
+    subprocess.run(command, cwd=str(PROJECT_ROOT), check=True)
 
 
 def copy_raw_files_to_redshift_callable(**context) -> None:
@@ -212,58 +216,79 @@ def olist_modern_data_stack():
 
     @task_group(group_id="raw_ingestion")
     def raw_ingestion():
-        validate_source_contract = BashOperator(
-            task_id="validate_source_contract",
-            cwd=str(PROJECT_ROOT),
-            bash_command=(
-                f"{PYTHON_BIN} scripts/utilities/validate_source_contract.py "
-                "--archive olist.zip "
-                "--profile docs/source_profile.json"
-            ),
-        )
+        @task
+        def validate_source_contract() -> None:
+            run_project_command(
+                [
+                    PYTHON_BIN,
+                    "scripts/utilities/validate_source_contract.py",
+                    "--archive",
+                    "olist.zip",
+                    "--profile",
+                    "docs/source_profile.json",
+                ]
+            )
 
-        upload_raw_files_to_s3 = BashOperator(
-            task_id="upload_raw_files_to_s3",
-            cwd=str(PROJECT_ROOT),
-            bash_command=(
-                f"{PYTHON_BIN} scripts/ingestion/ingest_olist_to_s3.py "
-                "--archive olist.zip "
-                "--profile docs/source_profile.json "
-                "--output-dir data/prepared/{{ ds_nodash }} "
-                "--batch-date '{{ params.batch_date }}' "
-                "--run-id '{{ run_id }}' "
-                '--s3-bucket "$OLIST_S3_BUCKET" '
-                '--s3-prefix "$OLIST_S3_PREFIX" '
-                "--upload"
-            ),
-        )
+        @task
+        def upload_raw_files_to_s3() -> None:
+            context = get_current_context()
+            params = context["params"]
+            run_project_command(
+                [
+                    PYTHON_BIN,
+                    "scripts/ingestion/ingest_olist_to_s3.py",
+                    "--archive",
+                    "olist.zip",
+                    "--profile",
+                    "docs/source_profile.json",
+                    "--output-dir",
+                    f"data/prepared/{context['ds_nodash']}",
+                    "--batch-date",
+                    str(params["batch_date"]),
+                    "--run-id",
+                    str(context["run_id"]),
+                    "--s3-bucket",
+                    required_env("OLIST_S3_BUCKET"),
+                    "--s3-prefix",
+                    os.environ.get("OLIST_S3_PREFIX", "olist"),
+                    "--upload",
+                ]
+            )
 
-        generate_and_upload_correction_feeds = BashOperator(
-            task_id="generate_and_upload_correction_feeds",
-            cwd=str(PROJECT_ROOT),
-            bash_command=(
-                f"{PYTHON_BIN} scripts/ingestion/generate_correction_feeds.py "
-                "--archive olist.zip "
-                "--output-dir data/prepared/{{ ds_nodash }} "
-                "--batch-date '{{ params.batch_date }}' "
-                "--run-id '{{ run_id }}' "
-                '--s3-bucket "$OLIST_S3_BUCKET" '
-                '--s3-prefix "$OLIST_S3_PREFIX" '
-                "--upload"
-            ),
-        )
+        @task
+        def generate_and_upload_correction_feeds() -> None:
+            context = get_current_context()
+            params = context["params"]
+            run_project_command(
+                [
+                    PYTHON_BIN,
+                    "scripts/ingestion/generate_correction_feeds.py",
+                    "--archive",
+                    "olist.zip",
+                    "--output-dir",
+                    f"data/prepared/{context['ds_nodash']}",
+                    "--batch-date",
+                    str(params["batch_date"]),
+                    "--run-id",
+                    str(context["run_id"]),
+                    "--s3-bucket",
+                    required_env("OLIST_S3_BUCKET"),
+                    "--s3-prefix",
+                    os.environ.get("OLIST_S3_PREFIX", "olist"),
+                    "--upload",
+                ]
+            )
 
-        copy_raw_files_to_redshift = PythonOperator(
-            task_id="copy_raw_files_to_redshift",
-            python_callable=copy_raw_files_to_redshift_callable,
-        )
+        @task
+        def copy_raw_files_to_redshift() -> None:
+            copy_raw_files_to_redshift_callable(**get_current_context())
 
-        (
-            validate_source_contract
-            >> upload_raw_files_to_s3
-            >> generate_and_upload_correction_feeds
-            >> copy_raw_files_to_redshift
-        )
+        source_validated = validate_source_contract()
+        raw_uploaded = upload_raw_files_to_s3()
+        corrections_uploaded = generate_and_upload_correction_feeds()
+        redshift_loaded = copy_raw_files_to_redshift()
+
+        source_validated >> [raw_uploaded, corrections_uploaded] >> redshift_loaded
 
     @task_group(group_id="dbt_transformations")
     def dbt_transformations():

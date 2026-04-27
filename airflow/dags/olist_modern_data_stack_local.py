@@ -13,7 +13,7 @@ from pathlib import Path
 
 from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.standard.operators.empty import EmptyOperator
-from airflow.sdk import Param, dag, task_group
+from airflow.sdk import Param, dag, get_current_context, task, task_group
 
 DAG_ID = "olist_modern_data_stack_local"
 
@@ -39,32 +39,53 @@ PYTHON_BIN = os.environ.get("OLIST_PYTHON_BIN", "python")
 DBT_PROJECT_DIR = PROJECT_ROOT / "dbt" / "olist_analytics"
 LOCAL_RAW_DIR = "data/raw/olist"
 POSTGRES_SQL_DIR = "infra/postgres"
-LOCAL_RUN_ID = "{{ run_id | replace(':', '_') | replace('+', '_') }}"
-LOCAL_BATCH_ID = "{{ params.batch_date }}"
 # Runtime default for manual/demo runs. It is after all generated correction
 # feed effective dates, so one batch sees the complete synthetic SCD2 scenario.
 DEFAULT_DEMO_BATCH_DATE = "2018-09-01"
 
 
-def batch_control_command(command: str, status: str | None = None) -> str:
-    status_arg = f" --status {status}" if status else ""
-    bootstrap_arg = (
-        f" --bootstrap-sql-dir {POSTGRES_SQL_DIR}" if command == "start" else ""
-    )
-    return (
-        f"{PYTHON_BIN} scripts/orchestration/batch_control.py {command} "
-        "--batch-date '{{ params.batch_date }}' "
-        f"--batch-id '{LOCAL_BATCH_ID}' "
-        f"--run-id '{LOCAL_RUN_ID}' "
-        f"--dag-id {DAG_ID} "
-        f"--raw-dir {LOCAL_RAW_DIR}"
-        f"{bootstrap_arg}"
-        f"{status_arg}"
-    )
-
-
 def local_run_id(run_id: str) -> str:
     return run_id.replace(":", "_").replace("+", "_")
+
+
+def run_project_command(command: list[str]) -> None:
+    subprocess.run(command, cwd=str(PROJECT_ROOT), check=True)
+
+
+def current_batch_identifiers() -> tuple[dict, str, str]:
+    context = get_current_context()
+    params = context["params"]
+    batch_date = str(params["batch_date"])
+    run_id = local_run_id(str(context["run_id"]))
+    return params, batch_date, run_id
+
+
+def batch_control_args(
+    command: str,
+    batch_date: str,
+    run_id: str,
+    status: str | None = None,
+) -> list[str]:
+    args = [
+        PYTHON_BIN,
+        "scripts/orchestration/batch_control.py",
+        command,
+        "--batch-date",
+        batch_date,
+        "--batch-id",
+        batch_date,
+        "--run-id",
+        run_id,
+        "--dag-id",
+        DAG_ID,
+        "--raw-dir",
+        LOCAL_RAW_DIR,
+    ]
+    if command == "start":
+        args.extend(["--bootstrap-sql-dir", POSTGRES_SQL_DIR])
+    if status:
+        args.extend(["--status", status])
+    return args
 
 
 def mark_batch_failed(context: dict) -> None:
@@ -158,108 +179,152 @@ dag_params = {
 def olist_modern_data_stack_local():
     start = EmptyOperator(task_id="start")
 
-    start_batch = BashOperator(
-        task_id="start_batch",
-        cwd=str(PROJECT_ROOT),
-        bash_command=batch_control_command("start"),
-    )
+    @task
+    def start_batch() -> None:
+        _, batch_date, run_id = current_batch_identifiers()
+        run_project_command(batch_control_args("start", batch_date, run_id))
+
+    @task
+    def mark_batch_status(status: str) -> None:
+        _, batch_date, run_id = current_batch_identifiers()
+        run_project_command(
+            batch_control_args(
+                "mark",
+                batch_date,
+                run_id,
+                status=status,
+            )
+        )
 
     @task_group(group_id="raw_preparation")
     def raw_preparation():
-        validate_source_contract = BashOperator(
-            task_id="validate_source_contract",
-            cwd=str(PROJECT_ROOT),
-            bash_command=(
-                f"{PYTHON_BIN} scripts/utilities/validate_source_contract.py "
-                "--archive olist.zip "
-                "--profile docs/source_profile.json"
-            ),
+        @task
+        def validate_source_contract() -> None:
+            run_project_command(
+                [
+                    PYTHON_BIN,
+                    "scripts/utilities/validate_source_contract.py",
+                    "--archive",
+                    "olist.zip",
+                    "--profile",
+                    "docs/source_profile.json",
+                ]
+            )
+
+        @task
+        def prepare_raw_files() -> None:
+            params, batch_date, run_id = current_batch_identifiers()
+            run_project_command(
+                [
+                    PYTHON_BIN,
+                    "scripts/ingestion/prepare_olist_raw_files.py",
+                    "--archive",
+                    "olist.zip",
+                    "--profile",
+                    "docs/source_profile.json",
+                    "--output-dir",
+                    LOCAL_RAW_DIR,
+                    "--batch-date",
+                    batch_date,
+                    "--batch-id",
+                    batch_date,
+                    "--run-id",
+                    run_id,
+                    "--dead-letter-max-rows",
+                    str(params["dead_letter_max_rows"]),
+                    "--dead-letter-max-rate",
+                    str(params["dead_letter_max_rate"]),
+                ]
+            )
+
+        @task
+        def generate_correction_feeds() -> None:
+            params, batch_date, run_id = current_batch_identifiers()
+            run_project_command(
+                [
+                    PYTHON_BIN,
+                    "scripts/ingestion/generate_correction_feeds.py",
+                    "--archive",
+                    "olist.zip",
+                    "--output-dir",
+                    LOCAL_RAW_DIR,
+                    "--batch-date",
+                    batch_date,
+                    "--batch-id",
+                    batch_date,
+                    "--run-id",
+                    run_id,
+                    "--dead-letter-max-rows",
+                    str(params["dead_letter_max_rows"]),
+                    "--dead-letter-max-rate",
+                    str(params["dead_letter_max_rate"]),
+                ]
+            )
+
+        source_contract = validate_source_contract()
+        source_validated = mark_batch_status.override(task_id="mark_source_validated")(
+            "SOURCE_VALIDATED"
+        )
+        raw_files = prepare_raw_files()
+        correction_feeds = generate_correction_feeds()
+        raw_prepared = mark_batch_status.override(task_id="mark_raw_prepared")(
+            "RAW_PREPARED"
         )
 
-        mark_source_validated = BashOperator(
-            task_id="mark_source_validated",
-            cwd=str(PROJECT_ROOT),
-            bash_command=batch_control_command("mark", "SOURCE_VALIDATED"),
-        )
-
-        prepare_raw_files = BashOperator(
-            task_id="prepare_raw_files",
-            cwd=str(PROJECT_ROOT),
-            bash_command=(
-                f"{PYTHON_BIN} scripts/ingestion/prepare_olist_raw_files.py "
-                "--archive olist.zip "
-                "--profile docs/source_profile.json "
-                f"--output-dir {LOCAL_RAW_DIR} "
-                "--batch-date '{{ params.batch_date }}' "
-                f"--batch-id '{LOCAL_BATCH_ID}' "
-                f"--run-id '{LOCAL_RUN_ID}' "
-                "--dead-letter-max-rows '{{ params.dead_letter_max_rows }}' "
-                "--dead-letter-max-rate '{{ params.dead_letter_max_rate }}'"
-            ),
-        )
-
-        generate_correction_feeds = BashOperator(
-            task_id="generate_correction_feeds",
-            cwd=str(PROJECT_ROOT),
-            bash_command=(
-                f"{PYTHON_BIN} scripts/ingestion/generate_correction_feeds.py "
-                "--archive olist.zip "
-                f"--output-dir {LOCAL_RAW_DIR} "
-                "--batch-date '{{ params.batch_date }}' "
-                f"--batch-id '{LOCAL_BATCH_ID}' "
-                f"--run-id '{LOCAL_RUN_ID}' "
-                "--dead-letter-max-rows '{{ params.dead_letter_max_rows }}' "
-                "--dead-letter-max-rate '{{ params.dead_letter_max_rate }}'"
-            ),
-        )
-
-        mark_raw_prepared = BashOperator(
-            task_id="mark_raw_prepared",
-            cwd=str(PROJECT_ROOT),
-            bash_command=batch_control_command("mark", "RAW_PREPARED"),
-        )
-
-        (
-            validate_source_contract
-            >> mark_source_validated
-            >> prepare_raw_files
-            >> generate_correction_feeds
-            >> mark_raw_prepared
-        )
+        source_contract >> source_validated
+        [source_validated, raw_files, correction_feeds] >> raw_prepared
 
     @task_group(group_id="raw_load_quality")
     def raw_load_quality():
-        load_raw_files_to_postgres = BashOperator(
-            task_id="load_raw_files_to_postgres",
-            cwd=str(PROJECT_ROOT),
-            bash_command=(
-                f"{PYTHON_BIN} scripts/loading/load_raw_to_postgres.py "
-                f"--raw-dir {LOCAL_RAW_DIR} "
-                "--profile docs/source_profile.json "
-                f"--bootstrap-sql-dir {POSTGRES_SQL_DIR} "
-                "--batch-date '{{ params.batch_date }}' "
-                f"--batch-id '{LOCAL_BATCH_ID}' "
-                f"--run-id '{LOCAL_RUN_ID}' "
-                f"--dag-id {DAG_ID}"
-            ),
-        )
+        @task
+        def load_raw_files_to_postgres() -> None:
+            _, batch_date, run_id = current_batch_identifiers()
+            run_project_command(
+                [
+                    PYTHON_BIN,
+                    "scripts/loading/load_raw_to_postgres.py",
+                    "--raw-dir",
+                    LOCAL_RAW_DIR,
+                    "--profile",
+                    "docs/source_profile.json",
+                    "--bootstrap-sql-dir",
+                    POSTGRES_SQL_DIR,
+                    "--batch-date",
+                    batch_date,
+                    "--batch-id",
+                    batch_date,
+                    "--run-id",
+                    run_id,
+                    "--dag-id",
+                    DAG_ID,
+                ]
+            )
 
-        reconcile_raw_load = BashOperator(
-            task_id="reconcile_raw_load",
-            cwd=str(PROJECT_ROOT),
-            bash_command=(
-                f"{PYTHON_BIN} scripts/quality/reconcile_batch.py "
-                f"--raw-dir {LOCAL_RAW_DIR} "
-                "--profile docs/source_profile.json "
-                f"--bootstrap-sql-dir {POSTGRES_SQL_DIR} "
-                "--batch-date '{{ params.batch_date }}' "
-                f"--batch-id '{LOCAL_BATCH_ID}' "
-                f"--run-id '{LOCAL_RUN_ID}' "
-                f"--dag-id {DAG_ID}"
-            ),
-        )
+        @task
+        def reconcile_raw_load() -> None:
+            _, batch_date, run_id = current_batch_identifiers()
+            run_project_command(
+                [
+                    PYTHON_BIN,
+                    "scripts/quality/reconcile_batch.py",
+                    "--raw-dir",
+                    LOCAL_RAW_DIR,
+                    "--profile",
+                    "docs/source_profile.json",
+                    "--bootstrap-sql-dir",
+                    POSTGRES_SQL_DIR,
+                    "--batch-date",
+                    batch_date,
+                    "--batch-id",
+                    batch_date,
+                    "--run-id",
+                    run_id,
+                    "--dag-id",
+                    DAG_ID,
+                ]
+            )
 
-        load_raw_files_to_postgres >> reconcile_raw_load
+        load_raw_files_to_postgres() >> reconcile_raw_load()
 
     @task_group(group_id="dbt_transformations")
     def dbt_transformations():
@@ -273,11 +338,9 @@ def olist_modern_data_stack_local():
             ),
         )
 
-        mark_snapshot_inputs_built = BashOperator(
-            task_id="mark_snapshot_inputs_built",
-            cwd=str(PROJECT_ROOT),
-            bash_command=batch_control_command("mark", "DBT_SNAPSHOT_INPUTS_BUILT"),
-        )
+        mark_snapshot_inputs_built = mark_batch_status.override(
+            task_id="mark_snapshot_inputs_built"
+        )("DBT_SNAPSHOT_INPUTS_BUILT")
 
         dbt_snapshot = BashOperator(
             task_id="dbt_snapshot",
@@ -285,11 +348,9 @@ def olist_modern_data_stack_local():
             bash_command="dbt snapshot --vars '{batch_date: \"{{ params.batch_date }}\"}'",
         )
 
-        mark_dbt_snapshotted = BashOperator(
-            task_id="mark_dbt_snapshotted",
-            cwd=str(PROJECT_ROOT),
-            bash_command=batch_control_command("mark", "DBT_SNAPSHOTTED"),
-        )
+        mark_dbt_snapshotted = mark_batch_status.override(
+            task_id="mark_dbt_snapshotted"
+        )("DBT_SNAPSHOTTED")
 
         dbt_build_command = (
             "dbt build --exclude resource_type:snapshot --vars "
@@ -309,10 +370,8 @@ def olist_modern_data_stack_local():
             ),
         )
 
-        mark_dbt_built = BashOperator(
-            task_id="mark_dbt_built",
-            cwd=str(PROJECT_ROOT),
-            bash_command=batch_control_command("mark", "DBT_BUILT"),
+        mark_dbt_built = mark_batch_status.override(task_id="mark_dbt_built")(
+            "DBT_BUILT"
         )
 
         dbt_test = BashOperator(
@@ -324,11 +383,7 @@ def olist_modern_data_stack_local():
             ),
         )
 
-        mark_tested = BashOperator(
-            task_id="mark_tested",
-            cwd=str(PROJECT_ROOT),
-            bash_command=batch_control_command("mark", "TESTED"),
-        )
+        mark_tested = mark_batch_status.override(task_id="mark_tested")("TESTED")
 
         (
             dbt_build_snapshot_inputs
@@ -345,7 +400,7 @@ def olist_modern_data_stack_local():
 
     (
         start
-        >> start_batch
+        >> start_batch()
         >> raw_preparation()
         >> raw_load_quality()
         >> dbt_transformations()
