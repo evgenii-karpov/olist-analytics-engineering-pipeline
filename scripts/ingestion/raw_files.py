@@ -13,7 +13,7 @@ import csv
 import gzip
 import json
 import shutil
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from contextlib import ExitStack
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -157,8 +157,8 @@ def validate_archive(zip_file: ZipFile, entities: Iterable[SourceEntity]) -> Non
         raise ValueError(f"Missing expected files: {', '.join(missing_files)}")
 
 
-def validate_header(actual_header: list[str], entity: SourceEntity) -> None:
-    if actual_header != entity.columns:
+def validate_header(actual_header: Sequence[str], entity: SourceEntity) -> None:
+    if list(actual_header) != entity.columns:
         raise ValueError(
             f"Unexpected header for {entity.file_name}. "
             f"Expected {entity.columns}, got {actual_header}"
@@ -244,7 +244,7 @@ def write_validated_rows(
                 dead_letter_row["_loaded_at"] = loaded_at
                 dead_letter_row["_source_file"] = source_file
                 dead_letter_row["_source_system"] = source_system
-                dead_letter_row["_source_row_number"] = source_row_number
+                dead_letter_row["_source_row_number"] = str(source_row_number)
                 dead_letter_row["_dead_letter_stage"] = dead_letter_stage
                 dead_letter_row["_dead_letter_reason"] = "; ".join(validation_errors)
                 dead_letter_row["_dead_lettered_at"] = dead_lettered_at

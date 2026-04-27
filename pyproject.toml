@@ -15,6 +15,32 @@ dependencies = [
     "psycopg2-binary>=2.9,<3",
 ]
 
+[dependency-groups]
+dev = [
+    {include-group = "airflow"},
+    {include-group = "quality"},
+]
+
+airflow = [
+    "apache-airflow==3.2.1",
+]
+
+quality = [
+    {include-group = "lint"},
+    {include-group = "typecheck"},
+    "pre-commit>=4.6.0",
+]
+
+lint = [
+    "ruff>=0.15.12",
+    "sqlfluff>=4.1.0",
+    "sqlfluff-templater-dbt>=4.1.0",
+]
+
+typecheck = [
+    "pyright>=1.1.409",
+]
+
 [tool.uv]
 package = false
 required-version = ">=0.11.0"
@@ -29,6 +55,11 @@ override-dependencies = [
 line-length = 88
 target-version = "py314"
 src = ["airflow/dags", "scripts", "tests"]
+
+[tool.pyright]
+typeCheckingMode = "standard"
+pythonVersion = "3.14"
+include = ["airflow/dags", "scripts", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF", "AIR"]
@@ -46,15 +77,4 @@ ignore = [
 "scripts/**/*.py" = [
     # CLI scripts bootstrap the repository root onto sys.path before local imports.
     "E402",
-]
-
-[dependency-groups]
-dev = [
-    "apache-airflow==3.2.1",
-]
-lint = [
-    "pre-commit>=4.6.0",
-    "ruff>=0.15.12",
-    "sqlfluff>=4.1.0",
-    "sqlfluff-templater-dbt>=4.1.0",
 ]

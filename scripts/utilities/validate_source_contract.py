@@ -40,7 +40,7 @@ def read_header_and_count(zip_file: ZipFile, file_name: str) -> tuple[list[str],
 
         row_count = sum(1 for _ in reader)
 
-    return reader.fieldnames, row_count
+    return list(reader.fieldnames), row_count
 
 
 def validate_archive(archive_path: Path, entities: list[ContractEntity]) -> None:

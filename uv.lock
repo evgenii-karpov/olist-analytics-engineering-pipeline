@@ -1510,14 +1510,31 @@ dependencies = [
 ]
 
 [package.dev-dependencies]
-dev = [
+airflow = [
     { name = "apache-airflow" },
 ]
-lint = [
+dev = [
+    { name = "apache-airflow" },
     { name = "pre-commit" },
+    { name = "pyright" },
     { name = "ruff" },
     { name = "sqlfluff" },
     { name = "sqlfluff-templater-dbt" },
+]
+lint = [
+    { name = "ruff" },
+    { name = "sqlfluff" },
+    { name = "sqlfluff-templater-dbt" },
+]
+quality = [
+    { name = "pre-commit" },
+    { name = "pyright" },
+    { name = "ruff" },
+    { name = "sqlfluff" },
+    { name = "sqlfluff-templater-dbt" },
+]
+typecheck = [
+    { name = "pyright" },
 ]
 
 [package.metadata]
@@ -1533,13 +1550,28 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "apache-airflow", specifier = "==3.2.1" }]
-lint = [
+airflow = [{ name = "apache-airflow", specifier = "==3.2.1" }]
+dev = [
+    { name = "apache-airflow", specifier = "==3.2.1" },
     { name = "pre-commit", specifier = ">=4.6.0" },
+    { name = "pyright", specifier = ">=1.1.409" },
     { name = "ruff", specifier = ">=0.15.12" },
     { name = "sqlfluff", specifier = ">=4.1.0" },
     { name = "sqlfluff-templater-dbt", specifier = ">=4.1.0" },
 ]
+lint = [
+    { name = "ruff", specifier = ">=0.15.12" },
+    { name = "sqlfluff", specifier = ">=4.1.0" },
+    { name = "sqlfluff-templater-dbt", specifier = ">=4.1.0" },
+]
+quality = [
+    { name = "pre-commit", specifier = ">=4.6.0" },
+    { name = "pyright", specifier = ">=1.1.409" },
+    { name = "ruff", specifier = ">=0.15.12" },
+    { name = "sqlfluff", specifier = ">=4.1.0" },
+    { name = "sqlfluff-templater-dbt", specifier = ">=4.1.0" },
+]
+typecheck = [{ name = "pyright", specifier = ">=1.1.409" }]
 
 [[package]]
 name = "opentelemetry-api"
@@ -1968,6 +2000,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c2/27/a3b6e5bf6ff856d2509292e95c8f57f0df7017cf5394921fc4e4ef40308a/pyjwt-2.12.1.tar.gz", hash = "sha256:c74a7a2adf861c04d002db713dd85f84beb242228e671280bf709d765b03672b", size = 102564, upload-time = "2026-03-13T19:27:37.25Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e5/7a/8dd906bd22e79e47397a61742927f6747fe93242ef86645ee9092e610244/pyjwt-2.12.1-py3-none-any.whl", hash = "sha256:28ca37c070cad8ba8cd9790cd940535d40274d22f80ab87f3ac6a713e6e8454c", size = 29726, upload-time = "2026-03-13T19:27:35.677Z" },
+]
+
+[[package]]
+name = "pyright"
+version = "1.1.409"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "nodeenv" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/51/4e/3aa27f74211522dba7e9cbc3e74de779c6d4b654c54e50a4840623be8014/pyright-1.1.409.tar.gz", hash = "sha256:986ee05beca9e077c165758ad123667c679e050059a2546aa02473930394bc93", size = 4430434, upload-time = "2026-04-23T11:02:03.799Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/16/6b/330d8ebae582b30c2959a1ef4c3bc344ebde48c2ff0c3f113c4710735e11/pyright-1.1.409-py3-none-any.whl", hash = "sha256:aa3ea228cab90c845c7a60d28db7a844c04315356392aa09fafcee98c8c22fb3", size = 6438161, upload-time = "2026-04-23T11:02:01.309Z" },
 ]
 
 [[package]]

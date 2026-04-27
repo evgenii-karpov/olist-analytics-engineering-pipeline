@@ -8,8 +8,8 @@ on:
       - master
 
 jobs:
-  lint:
-    name: Code lint and format checks
+  static-analysis:
+    name: Code quality and type checks
     runs-on: ubuntu-latest
 
     services:
@@ -49,8 +49,8 @@ jobs:
       - name: Install Python
         run: uv python install
 
-      - name: Install lint dependencies
-        run: uv sync --locked --group lint
+      - name: Install quality dependencies
+        run: uv sync --locked --group quality
 
       - name: Prepare dbt profile
         run: cp profiles.yml.example profiles.yml

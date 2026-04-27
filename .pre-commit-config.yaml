@@ -11,8 +11,22 @@ repos:
 
   - repo: local
     hooks:
+      - id: pyright
+        name: pyright
+        entry: uv run pyright
+        language: system
+        pass_filenames: false
+        types_or: [python, pyi]
+
       - id: sqlfluff-lint
         name: sqlfluff-lint
         entry: uv run sqlfluff lint
         language: system
         files: ^dbt/olist_analytics/(analyses|macros|models|snapshots|tests)/.*\.sql$
+
+      - id: dbt-parse
+        name: dbt-parse
+        entry: uv run dbt parse --project-dir dbt/olist_analytics --profiles-dir dbt/olist_analytics --target local_pg --no-partial-parse --show-all-deprecations
+        language: system
+        pass_filenames: false
+        files: ^dbt/olist_analytics/(dbt_project\.yml|profiles\.yml|models/|macros/|snapshots/|tests/|analyses/)

@@ -8,10 +8,12 @@ import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import psycopg2
 from psycopg2 import sql
 from psycopg2.extensions import connection as PgConnection
+from psycopg2.extensions import cursor as PgCursor
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -187,12 +189,19 @@ def postgres_connection(env: dict[str, str]) -> PgConnection:
     )
 
 
-def fingerprint_expression(columns: Sequence[str]) -> sql.SQL:
+def fingerprint_expression(columns: Sequence[str]) -> sql.Composable:
     values = [
         sql.SQL("coalesce({}::text, '<NULL>')").format(sql.Identifier(column))
         for column in columns
     ]
     return sql.SQL("concat_ws('|', {})").format(sql.SQL(", ").join(values))
+
+
+def fetch_one(cursor: PgCursor) -> tuple[Any, ...]:
+    row = cursor.fetchone()
+    if row is None:
+        raise AssertionError("Expected query to return exactly one row")
+    return row
 
 
 def relation_fingerprint(
@@ -223,7 +232,7 @@ def relation_fingerprint(
     )
     with connection.cursor() as cursor:
         cursor.execute(query)
-        row_count, checksum = cursor.fetchone()
+        row_count, checksum = fetch_one(cursor)
     return RelationFingerprint(row_count=int(row_count), checksum=str(checksum))
 
 
@@ -277,7 +286,7 @@ def assert_fact_matches_staging(connection: PgConnection) -> None:
             cross join unexpected_fact_rows;
             """
         )
-        missing_rows, unexpected_rows = cursor.fetchone()
+        missing_rows, unexpected_rows = fetch_one(cursor)
 
     if missing_rows or unexpected_rows:
         raise AssertionError(
@@ -315,7 +324,7 @@ def assert_no_orphan_fact_keys(connection: PgConnection) -> None:
     with connection.cursor() as cursor:
         for key_name, query in orphan_queries.items():
             cursor.execute(query)
-            orphan_count = int(cursor.fetchone()[0])
+            orphan_count = int(fetch_one(cursor)[0])
             if orphan_count:
                 failures[key_name] = orphan_count
 

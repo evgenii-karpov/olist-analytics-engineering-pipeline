@@ -13,14 +13,17 @@ from types import SimpleNamespace
 from zipfile import ZipFile
 
 from scripts.ingestion.local_storage import render_manifest
-from scripts.ingestion.raw_files import write_validated_rows
+from scripts.ingestion.raw_files import PreparedFile, write_validated_rows
 from scripts.ingestion.record_validation import (
     DeadLetterThreshold,
     DeadLetterThresholdExceeded,
     assert_dead_letter_thresholds,
     validate_row,
 )
-from scripts.loading.load_raw_to_postgres import load_dead_letter_manifest_entries
+from scripts.loading.load_raw_to_postgres import (
+    RawLoadSpec,
+    load_dead_letter_manifest_entries,
+)
 from scripts.loading.replay_dead_letters import ReplaySpec, build_replay_payload
 from scripts.orchestration.batch_control import (
     ManifestUris,
@@ -81,8 +84,12 @@ class RecordValidationTests(unittest.TestCase):
     def test_dead_letter_threshold_checks_both_count_and_rate(self) -> None:
         threshold = DeadLetterThreshold(max_rows=1, max_rate=0.1)
         prepared_files = [
-            SimpleNamespace(
+            PreparedFile(
                 entity_name="order_payments",
+                file_name="order_payments.csv.gz",
+                local_path=Path("order_payments.csv.gz"),
+                relative_path="raw/order_payments.csv.gz",
+                row_count=8,
                 dead_letter_row_count=2,
                 total_row_count=10,
             )
@@ -291,7 +298,10 @@ class BatchControlTests(unittest.TestCase):
             (raw_dir / "manifest.json").write_text("{}", encoding="utf-8")
             uris = manifest_uris(raw_dir)
 
-            self.assertTrue(uris.raw_manifest_uri.endswith("/manifest.json"))
+            raw_manifest_uri = uris.raw_manifest_uri
+            self.assertIsNotNone(raw_manifest_uri)
+            assert raw_manifest_uri is not None
+            self.assertTrue(raw_manifest_uri.endswith("/manifest.json"))
             self.assertIsNone(uris.correction_manifest_uri)
 
 
@@ -341,7 +351,10 @@ class ReconciliationTests(unittest.TestCase):
         self,
     ) -> None:
         specs = [
-            SimpleNamespace(entity_name="customer_profile_changes"),
+            RawLoadSpec(
+                entity_name="customer_profile_changes",
+                file_name="customer_profile_changes.csv.gz",
+            ),
         ]
         manifest_entry = SimpleNamespace(
             entity_name="customer_profile_changes",

@@ -154,6 +154,9 @@ def profile_csv(zip_file: ZipFile, file_name: str, entity_name: str) -> FileProf
                     profile.null_count += 1
                     continue
 
+                if value is None:
+                    continue
+
                 value = value.strip()
                 profile.non_null_count += 1
 

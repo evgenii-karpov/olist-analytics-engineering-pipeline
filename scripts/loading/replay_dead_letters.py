@@ -113,7 +113,9 @@ def resolve_batch_id(rows: list[dict[str, str]], requested_batch_id: str | None)
     if requested_batch_id:
         return requested_batch_id
 
-    batch_ids = {row.get("_batch_id") for row in rows if row.get("_batch_id")}
+    batch_ids = {
+        batch_id for row in rows if (batch_id := row.get("_batch_id")) is not None
+    }
     if len(batch_ids) != 1:
         raise ValueError(
             "Dead-letter file must contain exactly one _batch_id when --batch-id is omitted"

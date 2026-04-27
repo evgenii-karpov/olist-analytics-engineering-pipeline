@@ -6,9 +6,11 @@ import argparse
 import json
 import os
 import sys
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Protocol
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -21,10 +23,16 @@ from psycopg2.extensions import connection as PgConnection
 from scripts.loading.load_raw_to_postgres import (
     RawLoadSpec,
     execute_sql_files,
+    fetch_one,
     load_dead_letter_manifest_entries,
     load_specs,
 )
 from scripts.orchestration.batch_control import BatchRunContext, mark_batch_status
+
+
+class RawLoadSpecLike(Protocol):
+    @property
+    def entity_name(self) -> str: ...
 
 
 @dataclass(frozen=True)
@@ -85,7 +93,7 @@ def count_raw_rows(
     )
     with connection.cursor() as cursor:
         cursor.execute(count_statement, (batch_id,))
-        return int(cursor.fetchone()[0])
+        return int(fetch_one(cursor)[0])
 
 
 def count_replayed_rows(
@@ -104,7 +112,7 @@ def count_replayed_rows(
             """,
             (batch_id, entity_name),
         )
-        return int(cursor.fetchone()[0])
+        return int(fetch_one(cursor)[0])
 
 
 def evaluate_reconciliation(input_row: ReconciliationInput) -> ReconciliationResult:
@@ -161,30 +169,31 @@ def evaluate_reconciliation(input_row: ReconciliationInput) -> ReconciliationRes
 
 
 def build_reconciliation_results(
-    specs: list[RawLoadSpec],
-    expected_source_rows: dict[str, int],
-    manifest_entries: dict[str, object],
-    raw_loaded_rows: dict[str, int],
-    replayed_rows: dict[str, int],
+    specs: Sequence[RawLoadSpecLike],
+    expected_source_rows: Mapping[str, int],
+    manifest_entries: Mapping[str, object],
+    raw_loaded_rows: Mapping[str, int],
+    replayed_rows: Mapping[str, int],
 ) -> list[ReconciliationResult]:
     results = []
     for spec in specs:
-        manifest_entry = manifest_entries.get(spec.entity_name)
+        entity_name = spec.entity_name
+        manifest_entry = manifest_entries.get(entity_name)
         prepared_total_rows = getattr(manifest_entry, "total_rows", None)
         prepared_valid_rows = getattr(manifest_entry, "valid_rows", None)
         dead_letter_rows = getattr(manifest_entry, "failed_rows", None)
-        expected_rows = expected_source_rows.get(spec.entity_name, prepared_total_rows)
+        expected_rows = expected_source_rows.get(entity_name, prepared_total_rows)
         results.append(
             evaluate_reconciliation(
                 ReconciliationInput(
-                    entity_name=spec.entity_name,
+                    entity_name=entity_name,
                     source_uri=getattr(manifest_entry, "source_uri", None),
                     expected_source_rows=expected_rows,
                     prepared_total_rows=prepared_total_rows,
                     prepared_valid_rows=prepared_valid_rows,
                     dead_letter_rows=dead_letter_rows,
-                    replayed_rows=replayed_rows.get(spec.entity_name, 0),
-                    raw_loaded_rows=raw_loaded_rows.get(spec.entity_name, 0),
+                    replayed_rows=replayed_rows.get(entity_name, 0),
+                    raw_loaded_rows=raw_loaded_rows.get(entity_name, 0),
                 )
             )
         )

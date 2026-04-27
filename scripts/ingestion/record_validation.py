@@ -3,15 +3,28 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+from typing import Protocol, cast
 
 TYPE_PATTERN = re.compile(r"^(?P<base>[a-z]+)(?:\((?P<args>[^)]+)\))?$")
 
 
 class DeadLetterThresholdExceeded(ValueError):
     """Raised when rejected records exceed the configured threshold."""
+
+
+class PreparedFileLike(Protocol):
+    @property
+    def entity_name(self) -> str: ...
+
+    @property
+    def dead_letter_row_count(self) -> int: ...
+
+    @property
+    def total_row_count(self) -> int: ...
 
 
 @dataclass(frozen=True)
@@ -58,7 +71,7 @@ class DeadLetterThreshold:
 
 
 def assert_dead_letter_thresholds(
-    prepared_files: list[object],
+    prepared_files: Sequence[PreparedFileLike],
     threshold: DeadLetterThreshold,
 ) -> None:
     violations = [
@@ -161,6 +174,7 @@ def validate_decimal(column_name: str, value: str, args: list[int]) -> list[str]
 
     precision, scale = args
     _, digits, exponent = decimal_value.as_tuple()
+    exponent = cast(int, exponent)
     actual_scale = max(-exponent, 0)
     integer_digits = max(len(digits) - actual_scale, 0)
     max_integer_digits = precision - scale

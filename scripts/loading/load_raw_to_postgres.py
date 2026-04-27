@@ -11,6 +11,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -19,6 +20,7 @@ if str(PROJECT_ROOT) not in sys.path:
 import psycopg2
 from psycopg2 import sql
 from psycopg2.extensions import connection as PgConnection
+from psycopg2.extensions import cursor as PgCursor
 
 from scripts.ingestion.correction_specs import CORRECTION_FEEDS
 from scripts.ingestion.raw_files import load_source_entities, raw_file_path
@@ -56,6 +58,13 @@ def postgres_connection(args: argparse.Namespace) -> PgConnection:
         user=args.user,
         password=args.password,
     )
+
+
+def fetch_one(cursor: PgCursor) -> tuple[Any, ...]:
+    row = cursor.fetchone()
+    if row is None:
+        raise ValueError("Expected query to return exactly one row")
+    return row
 
 
 def load_specs(profile_path: Path) -> list[RawLoadSpec]:
@@ -153,7 +162,7 @@ def record_success(
             "select count(*) from {}.{} where _batch_id = %s"
         ).format(sql.Identifier("raw"), sql.Identifier(spec.entity_name))
         cursor.execute(count_statement, (batch_id,))
-        rows_loaded = cursor.fetchone()[0]
+        rows_loaded = fetch_one(cursor)[0]
         cursor.execute(
             """
             insert into audit.load_runs (
