@@ -280,7 +280,7 @@ def olist_modern_data_stack_local():
         )
 
         _ = source_contract >> source_validated
-        _ = [source_validated, raw_files, correction_feeds] >> raw_prepared
+        _ = source_validated >> [raw_files, correction_feeds] >> raw_prepared
 
     @task_group(group_id="raw_load_quality")
     def raw_load_quality():
