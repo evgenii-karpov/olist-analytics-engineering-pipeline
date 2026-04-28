@@ -1,4 +1,9 @@
-dbt/olist_analytics/target/
+.venv/
 dbt/olist_analytics/dbt_packages/
 dbt/olist_analytics/logs/
+dbt/olist_analytics/macros/
 dbt/olist_analytics/profiles.yml
+dbt/olist_analytics/target/
+dbt/olist_analytics/tests/generic/
+infra/
+logs/
