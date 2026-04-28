@@ -68,7 +68,7 @@ def airflow_dags_folder() -> Path:
     configured_folder = os.environ.get("AIRFLOW__CORE__DAGS_FOLDER")
     if configured_folder:
         return Path(configured_folder)
-    return PROJECT_ROOT / "airflow" / "dags"
+    return Path("/opt/airflow/dags")
 
 
 def local_dag_file() -> Path:
