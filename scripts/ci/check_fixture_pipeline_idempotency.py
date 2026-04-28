@@ -1,10 +1,17 @@
-"""Run the small fixture twice and assert the replay is idempotent."""
+"""Trigger the local Airflow DAG twice on the small fixture and compare outputs."""
 
 from __future__ import annotations
 
 import argparse
+import csv
+import gzip
+import hashlib
 import json
+import os
+import shutil
+import subprocess
 import sys
+import time
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,18 +26,36 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.ci.run_fixture_pipeline import (
-    DEFAULT_ARCHIVE,
-    DEFAULT_FIXTURE_BATCH_DATE,
-    DEFAULT_PROFILE,
-    DEFAULT_RAW_DIR,
-    pipeline_env,
-    run_pipeline,
+DEFAULT_ARCHIVE = (
+    PROJECT_ROOT / "tests" / "fixtures" / "olist_small" / "olist_small.zip"
 )
+DEFAULT_PROFILE = (
+    PROJECT_ROOT / "tests" / "fixtures" / "olist_small" / "source_profile_small.json"
+)
+DEFAULT_RAW_DIR = PROJECT_ROOT / "data" / "ci" / "raw" / "olist_small"
+DEFAULT_FIXTURE_BATCH_DATE = "2018-09-01"
+POSTGRES_SQL_DIR = PROJECT_ROOT / "infra" / "postgres"
+RESET_SCHEMAS = (
+    "raw",
+    "audit",
+    "staging",
+    "intermediate",
+    "snapshots",
+    "core",
+    "marts",
+)
+TERMINAL_DAG_STATES = {"success", "failed"}
+VOLATILE_RAW_COLUMNS = {"_loaded_at"}
 
 
 @dataclass(frozen=True)
 class RelationFingerprint:
+    row_count: int
+    checksum: str
+
+
+@dataclass(frozen=True)
+class RawFileFingerprint:
     row_count: int
     checksum: str
 
@@ -144,39 +169,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-id", default=DEFAULT_FIXTURE_BATCH_DATE)
     parser.add_argument("--initial-run-id", default="ci_fixture_initial")
     parser.add_argument("--replay-run-id", default="ci_fixture_replay")
-    parser.add_argument("--dag-id", default="github_actions_fixture")
+    parser.add_argument("--dag-id", default="olist_modern_data_stack_local")
     parser.add_argument("--lookback-days", type=int, default=3)
     parser.add_argument("--dead-letter-max-rows", type=int, default=0)
     parser.add_argument("--dead-letter-max-rate", type=float, default=0)
     parser.add_argument("--dbt-threads", type=int, default=1)
-    parser.add_argument("--dbt-bin")
+    parser.add_argument("--timeout-seconds", type=int, default=1800)
+    parser.add_argument("--poll-seconds", type=int, default=5)
     return parser.parse_args()
 
 
-def pipeline_args(
-    args: argparse.Namespace,
-    *,
-    run_id: str,
-    reset_warehouse: bool,
-    full_refresh: bool,
-) -> argparse.Namespace:
-    return argparse.Namespace(
-        archive=args.archive,
-        profile=args.profile,
-        raw_dir=args.raw_dir,
-        batch_date=args.batch_date,
-        batch_id=args.batch_id,
-        run_id=run_id,
-        dag_id=args.dag_id,
-        lookback_days=args.lookback_days,
-        dead_letter_max_rows=args.dead_letter_max_rows,
-        dead_letter_max_rate=args.dead_letter_max_rate,
-        dbt_threads=args.dbt_threads,
-        dbt_bin=args.dbt_bin,
-        skip_dbt=False,
-        reset_warehouse=reset_warehouse,
-        full_refresh=full_refresh,
-    )
+def pipeline_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env.setdefault("POSTGRES_HOST", "postgres")
+    env.setdefault("POSTGRES_PORT", "5432")
+    env.setdefault("POSTGRES_DB", "olist_analytics")
+    env.setdefault("POSTGRES_USER", "olist")
+    env.setdefault("POSTGRES_PASSWORD", "olist")
+    return env
 
 
 def postgres_connection(env: dict[str, str]) -> PgConnection:
@@ -186,6 +196,148 @@ def postgres_connection(env: dict[str, str]) -> PgConnection:
         dbname=env["POSTGRES_DB"],
         user=env["POSTGRES_USER"],
         password=env["POSTGRES_PASSWORD"],
+    )
+
+
+def reset_warehouse(env: dict[str, str]) -> None:
+    connection = postgres_connection(env)
+    try:
+        with connection.cursor() as cursor:
+            for schema in RESET_SCHEMAS:
+                cursor.execute(f"drop schema if exists {schema} cascade;")
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def clean_raw_dir(raw_dir: Path) -> None:
+    resolved_raw_dir = raw_dir.resolve()
+    project_root = PROJECT_ROOT.resolve()
+    if not resolved_raw_dir.is_relative_to(project_root):
+        raise ValueError(f"Refusing to delete raw dir outside project: {raw_dir}")
+    if resolved_raw_dir.exists():
+        shutil.rmtree(resolved_raw_dir)
+
+
+def run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
+    print(f"+ {' '.join(command)}", flush=True)
+    result = subprocess.run(
+        command,
+        cwd=PROJECT_ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    if result.returncode != 0:
+        print(result.stdout, end="", flush=True)
+        raise subprocess.CalledProcessError(
+            result.returncode,
+            command,
+            output=result.stdout,
+        )
+    return result
+
+
+def dag_conf(args: argparse.Namespace, *, full_refresh: bool) -> dict[str, Any]:
+    return {
+        "batch_date": args.batch_date,
+        "lookback_days": args.lookback_days,
+        "full_refresh": full_refresh,
+        "source_archive": args.archive,
+        "source_profile": args.profile,
+        "raw_dir": args.raw_dir,
+        "dead_letter_max_rows": args.dead_letter_max_rows,
+        "dead_letter_max_rate": args.dead_letter_max_rate,
+    }
+
+
+def airflow_metadata_connection() -> PgConnection:
+    return psycopg2.connect(
+        host=os.environ.get("AIRFLOW_POSTGRES_HOST", "airflow-postgres"),
+        port=int(os.environ.get("AIRFLOW_POSTGRES_PORT", "5432")),
+        dbname=os.environ.get("AIRFLOW_POSTGRES_DB", "airflow"),
+        user=os.environ.get("AIRFLOW_POSTGRES_USER", "airflow"),
+        password=os.environ.get("AIRFLOW_POSTGRES_PASSWORD", "airflow"),
+    )
+
+
+def fetch_dag_run_state(dag_id: str, run_id: str) -> str | None:
+    with airflow_metadata_connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            select state
+            from dag_run
+            where dag_id = %s
+              and run_id = %s;
+            """,
+            (dag_id, run_id),
+        )
+        row = cursor.fetchone()
+    return None if row is None else str(row[0])
+
+
+def fetch_failed_tasks(dag_id: str, run_id: str) -> list[tuple[str, str]]:
+    with airflow_metadata_connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            select task_id, state
+            from task_instance
+            where dag_id = %s
+              and run_id = %s
+              and state in ('failed', 'upstream_failed')
+            order by task_id;
+            """,
+            (dag_id, run_id),
+        )
+        rows = cursor.fetchall()
+    return [(str(task_id), str(state)) for task_id, state in rows]
+
+
+def trigger_dag(args: argparse.Namespace, *, run_id: str, full_refresh: bool) -> None:
+    try:
+        unpause = run_command(["airflow", "dags", "unpause", args.dag_id])
+        print(unpause.stdout, end="", flush=True)
+    except subprocess.CalledProcessError as exc:
+        print(exc.stdout, end="", flush=True)
+        raise
+
+    conf = json.dumps(dag_conf(args, full_refresh=full_refresh), sort_keys=True)
+    result = run_command(
+        [
+            "airflow",
+            "dags",
+            "trigger",
+            args.dag_id,
+            "--run-id",
+            run_id,
+            "--conf",
+            conf,
+        ]
+    )
+    print(result.stdout, end="", flush=True)
+
+
+def wait_for_dag_success(args: argparse.Namespace, *, run_id: str) -> None:
+    deadline = time.monotonic() + args.timeout_seconds
+    last_state = None
+    while time.monotonic() < deadline:
+        state = fetch_dag_run_state(args.dag_id, run_id)
+        if state != last_state:
+            print(f"DAG run {run_id} state: {state}", flush=True)
+            last_state = state
+        if state == "success":
+            return
+        if state in TERMINAL_DAG_STATES:
+            failed_tasks = fetch_failed_tasks(args.dag_id, run_id)
+            formatted_tasks = json.dumps(failed_tasks, indent=2)
+            raise AssertionError(
+                f"DAG run {run_id} finished with state={state}; "
+                f"failed_tasks={formatted_tasks}"
+            )
+        time.sleep(args.poll_seconds)
+
+    raise TimeoutError(
+        f"Timed out after {args.timeout_seconds}s waiting for DAG run {run_id}"
     )
 
 
@@ -240,6 +392,38 @@ def capture_fingerprints(connection: PgConnection) -> dict[str, RelationFingerpr
     return {
         relation_name: relation_fingerprint(connection, relation_name, columns)
         for relation_name, columns in FINGERPRINT_COLUMNS.items()
+    }
+
+
+def normalized_raw_path(path: Path, raw_dir: Path) -> str:
+    parts = path.relative_to(raw_dir).parts
+    return "/".join(part for part in parts if not part.startswith("run_id="))
+
+
+def raw_row_fingerprint(row: dict[str, str]) -> str:
+    normalized_items = [
+        (key, value)
+        for key, value in sorted(row.items())
+        if key not in VOLATILE_RAW_COLUMNS
+    ]
+    payload = json.dumps(normalized_items, sort_keys=True, separators=(",", ":"))
+    return hashlib.md5(payload.encode("utf-8")).hexdigest()
+
+
+def raw_file_fingerprint(path: Path) -> RawFileFingerprint:
+    row_hashes = []
+    with gzip.open(path, mode="rt", encoding="utf-8", newline="") as raw_file:
+        reader = csv.DictReader(raw_file)
+        for row in reader:
+            row_hashes.append(raw_row_fingerprint(row))
+    checksum = hashlib.md5("|".join(sorted(row_hashes)).encode("utf-8")).hexdigest()
+    return RawFileFingerprint(row_count=len(row_hashes), checksum=checksum)
+
+
+def capture_raw_file_fingerprints(raw_dir: Path) -> dict[str, RawFileFingerprint]:
+    return {
+        normalized_raw_path(path, raw_dir): raw_file_fingerprint(path)
+        for path in sorted(raw_dir.rglob("*.csv.gz"))
     }
 
 
@@ -355,6 +539,26 @@ def assert_replay_matches_initial(
         raise AssertionError(f"Fixture replay changed analytical outputs:\n{formatted}")
 
 
+def assert_raw_files_match_initial(
+    initial: dict[str, RawFileFingerprint],
+    replay: dict[str, RawFileFingerprint],
+) -> None:
+    if initial == replay:
+        return
+
+    all_paths = sorted(set(initial) | set(replay))
+    mismatches = {}
+    for path in all_paths:
+        if initial.get(path) != replay.get(path):
+            mismatches[path] = {
+                "initial": None if path not in initial else initial[path].__dict__,
+                "replay": None if path not in replay else replay[path].__dict__,
+            }
+
+    formatted = json.dumps(mismatches, indent=2, sort_keys=True)
+    raise AssertionError(f"Fixture replay changed raw file outputs:\n{formatted}")
+
+
 def print_fingerprints(
     label: str,
     fingerprints: dict[str, RelationFingerprint],
@@ -368,40 +572,50 @@ def print_fingerprints(
         )
 
 
+def print_raw_fingerprints(
+    label: str,
+    fingerprints: dict[str, RawFileFingerprint],
+) -> None:
+    print(f"{label} raw file fingerprints:", flush=True)
+    for path, fingerprint in fingerprints.items():
+        print(
+            f"- {path}: rows={fingerprint.row_count}, checksum={fingerprint.checksum}",
+            flush=True,
+        )
+
+
 def main() -> None:
     args = parse_args()
     env = pipeline_env()
+    raw_dir = Path(args.raw_dir)
 
-    print("Running initial fixture pipeline with warehouse reset", flush=True)
-    run_pipeline(
-        pipeline_args(
-            args,
-            run_id=args.initial_run_id,
-            reset_warehouse=True,
-            full_refresh=True,
-        ),
-        env,
-    )
+    print("Resetting warehouse for initial fixture DAG run", flush=True)
+    clean_raw_dir(raw_dir)
+    reset_warehouse(env)
+
+    print("Triggering initial fixture DAG run", flush=True)
+    trigger_dag(args, run_id=args.initial_run_id, full_refresh=True)
+    wait_for_dag_success(args, run_id=args.initial_run_id)
+
+    initial_raw_fingerprints = capture_raw_file_fingerprints(raw_dir)
+    print_raw_fingerprints("Initial", initial_raw_fingerprints)
     with postgres_connection(env) as connection:
         assert_output_contracts(connection)
         initial_fingerprints = capture_fingerprints(connection)
     print_fingerprints("Initial", initial_fingerprints)
 
-    print("Replaying fixture pipeline incrementally", flush=True)
-    run_pipeline(
-        pipeline_args(
-            args,
-            run_id=args.replay_run_id,
-            reset_warehouse=False,
-            full_refresh=False,
-        ),
-        env,
-    )
+    print("Triggering replay fixture DAG run", flush=True)
+    trigger_dag(args, run_id=args.replay_run_id, full_refresh=False)
+    wait_for_dag_success(args, run_id=args.replay_run_id)
+
+    replay_raw_fingerprints = capture_raw_file_fingerprints(raw_dir)
+    print_raw_fingerprints("Replay", replay_raw_fingerprints)
     with postgres_connection(env) as connection:
         assert_output_contracts(connection)
         replay_fingerprints = capture_fingerprints(connection)
     print_fingerprints("Replay", replay_fingerprints)
 
+    assert_raw_files_match_initial(initial_raw_fingerprints, replay_raw_fingerprints)
     assert_replay_matches_initial(initial_fingerprints, replay_fingerprints)
     print("Fixture replay is idempotent", flush=True)
 

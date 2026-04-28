@@ -21,9 +21,9 @@ airflow-imports
      and isolated DAG imports.
 
 fixture-integration
-  -> Small fixture end-to-end path through PostgreSQL, reconciliation, dbt
-     snapshots/build/tests, batch-control checks, and incremental replay
-     idempotency.
+  -> Small fixture end-to-end path through the local Airflow DAG, PostgreSQL,
+     reconciliation, dbt snapshots/build/tests, batch-control checks, raw file
+     comparison, and incremental replay idempotency.
 ```
 
 ## Small Fixture Dataset
@@ -59,8 +59,8 @@ Happy path:
 - dbt snapshots;
 - dbt core and mart build;
 - dbt tests.
-- incremental replay of the same fixture batch with stable analytical output
-  fingerprints.
+- incremental replay of the same fixture batch through Airflow with stable raw
+  file and analytical output fingerprints.
 
 Failure modes:
 

@@ -63,12 +63,13 @@ uv run pre-commit run --all-files
 Run the small fixture pipeline used by CI:
 
 ```bash
-docker compose up -d postgres
-uv run python scripts/ci/run_fixture_pipeline.py --reset-warehouse
+docker compose up -d --wait postgres airflow-postgres airflow
+docker compose exec -T airflow python scripts/ci/check_fixture_pipeline_idempotency.py
 ```
 
-`--reset-warehouse` recreates the local analytical schemas, so use it for
-validation runs rather than exploratory local tables.
+The check resets the local analytical schemas and fixture raw directory before
+the first Airflow DAG run, so use it for validation runs rather than
+exploratory local tables.
 
 ## Full Manual Run
 
