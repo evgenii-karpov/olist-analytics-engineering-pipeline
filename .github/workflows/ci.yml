@@ -158,6 +158,14 @@ jobs:
       - name: Start Airflow fixture stack
         run: docker compose up -d --wait postgres airflow-postgres airflow
 
+      - name: Check Airflow DAG import errors
+        run: >-
+          docker compose exec -T airflow
+          python scripts/ci/check_airflow_dag_imports.py
+
+      - name: Register Airflow DAGs
+        run: docker compose exec -T airflow airflow dags reserialize
+
       - name: Run small fixture DAG idempotency check
         run: >-
           docker compose exec -T airflow

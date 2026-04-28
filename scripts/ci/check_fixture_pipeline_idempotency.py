@@ -167,8 +167,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--raw-dir", default=str(DEFAULT_RAW_DIR))
     parser.add_argument("--batch-date", default=DEFAULT_FIXTURE_BATCH_DATE)
     parser.add_argument("--batch-id", default=DEFAULT_FIXTURE_BATCH_DATE)
-    parser.add_argument("--initial-run-id", default="ci_fixture_initial")
-    parser.add_argument("--replay-run-id", default="ci_fixture_replay")
+    parser.add_argument("--initial-run-id")
+    parser.add_argument("--replay-run-id")
     parser.add_argument("--dag-id", default="olist_modern_data_stack_local")
     parser.add_argument("--lookback-days", type=int, default=3)
     parser.add_argument("--dead-letter-max-rows", type=int, default=0)
@@ -240,9 +240,44 @@ def run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
     return result
 
 
+def print_airflow_diagnostics() -> None:
+    diagnostics = [
+        ["airflow", "config", "get-value", "core", "dags_folder"],
+        [
+            "python",
+            "-c",
+            "from pathlib import Path; print(sorted(str(p) for p in Path('/opt/airflow/dags').glob('*.py')))",
+        ],
+        ["airflow", "dags", "list-import-errors"],
+        ["airflow", "dags", "list"],
+    ]
+    for command in diagnostics:
+        result = subprocess.run(
+            command,
+            cwd=PROJECT_ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+        print(f"+ {' '.join(command)}", flush=True)
+        print(result.stdout, end="", flush=True)
+
+
 def wait_for_dag_registration(args: argparse.Namespace) -> None:
     deadline = time.monotonic() + args.dag_registration_timeout_seconds
     last_output = ""
+    reserialize = subprocess.run(
+        ["airflow", "dags", "reserialize"],
+        cwd=PROJECT_ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    if reserialize.returncode != 0:
+        last_output = reserialize.stdout
+        print(last_output, end="", flush=True)
 
     while time.monotonic() < deadline:
         result = subprocess.run(
@@ -262,6 +297,7 @@ def wait_for_dag_registration(args: argparse.Namespace) -> None:
         time.sleep(args.dag_registration_poll_seconds)
 
     print(last_output, end="", flush=True)
+    print_airflow_diagnostics()
     raise TimeoutError(
         "Timed out after "
         f"{args.dag_registration_timeout_seconds}s waiting for DAG {args.dag_id}"
@@ -619,6 +655,9 @@ def main() -> None:
     args = parse_args()
     env = pipeline_env()
     raw_dir = Path(args.raw_dir)
+    run_id_suffix = str(int(time.time()))
+    args.initial_run_id = args.initial_run_id or f"ci_fixture_initial_{run_id_suffix}"
+    args.replay_run_id = args.replay_run_id or f"ci_fixture_replay_{run_id_suffix}"
 
     print("Resetting warehouse for initial fixture DAG run", flush=True)
     clean_raw_dir(raw_dir)
