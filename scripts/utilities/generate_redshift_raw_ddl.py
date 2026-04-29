@@ -15,7 +15,7 @@ METADATA_COLUMNS = [
 
 
 SCHEMAS = [
-    "raw",
+    "raw_data",
     "staging",
     "intermediate",
     "snapshots",
@@ -43,7 +43,7 @@ def render_create_schemas() -> str:
 
 def render_raw_table(entity: dict) -> str:
     table_name = entity["entity_name"]
-    lines = [f"create table if not exists raw.{table_name} ("]
+    lines = [f"create table if not exists raw_data.{table_name} ("]
     column_lines = []
 
     for column in entity["columns"]:
@@ -133,7 +133,7 @@ def render_copy_template(profile: list[dict]) -> str:
         )
         lines.extend(
             [
-                f"copy raw.{entity_name}",
+                f"copy raw_data.{entity_name}",
                 f"from '{source_path}'",
                 "iam_role '<redshift_iam_role_arn>'",
                 "csv",

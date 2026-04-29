@@ -43,7 +43,7 @@ the filesystem so the full pipeline stays reproducible.
 PostgreSQL is the local analytical warehouse. It owns these schemas:
 
 ```text
-raw
+raw_data
 staging
 intermediate
 snapshots
@@ -52,7 +52,7 @@ marts
 audit
 ```
 
-Raw files are streamed into the `raw` schema. The `audit` schema stores batch
+Raw files are streamed into the `raw_data` schema. The `audit` schema stores batch
 control state, raw load attempts, reconciliation results, dead-letter events,
 and replay attempts.
 

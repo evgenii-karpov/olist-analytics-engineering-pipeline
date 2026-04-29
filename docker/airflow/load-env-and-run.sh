@@ -26,12 +26,11 @@ if [[ -f "${ENV_FILE}" ]]; then
 fi
 
 # Preserve local defaults without exposing infrastructure values in Compose config.
-: "${AWS_PROFILE:=default}"
 : "${AWS_REGION:=us-east-1}"
 : "${AWS_DEFAULT_REGION:=${AWS_REGION}}"
 : "${OLIST_S3_PREFIX:=olist}"
 : "${REDSHIFT_PORT:=5439}"
 
-export AWS_PROFILE AWS_REGION AWS_DEFAULT_REGION OLIST_S3_PREFIX REDSHIFT_PORT
+export AWS_REGION AWS_DEFAULT_REGION OLIST_S3_PREFIX REDSHIFT_PORT
 
 exec "$@"

@@ -30,7 +30,7 @@ from scripts.ingestion.raw_files import (
     utc_now_string,
 )
 from scripts.ingestion.record_validation import validate_row
-from scripts.loading.load_raw_to_postgres import execute_sql_files, utc_now
+from scripts.loading.load_raw_to_postgres import RAW_SCHEMA, execute_sql_files, utc_now
 
 
 @dataclass(frozen=True)
@@ -185,7 +185,7 @@ def delete_previous_replay(
           and _source_file = %s
           and _source_system = %s;
         """
-    ).format(sql.Identifier("raw"), sql.Identifier(spec.entity_name))
+    ).format(sql.Identifier(RAW_SCHEMA), sql.Identifier(spec.entity_name))
     with connection.cursor() as cursor:
         cursor.execute(
             delete_statement,
@@ -200,7 +200,7 @@ def copy_replay_rows(
 ) -> None:
     copy_statement = sql.SQL(
         "copy {}.{} from stdin with (format csv, header true)"
-    ).format(sql.Identifier("raw"), sql.Identifier(spec.entity_name))
+    ).format(sql.Identifier(RAW_SCHEMA), sql.Identifier(spec.entity_name))
     with connection.cursor() as cursor:
         cursor.copy_expert(copy_statement.as_string(connection), payload.csv_buffer)
 
@@ -253,7 +253,7 @@ def record_replay_success(
                 payload.batch_id,
                 spec.entity_name,
                 dead_letter_file.resolve().as_uri(),
-                f"raw.{spec.entity_name}",
+                f"{RAW_SCHEMA}.{spec.entity_name}",
                 payload.replay_source_file,
                 payload.row_count,
                 started_at,
@@ -295,7 +295,7 @@ def record_replay_failure(
                 batch_id,
                 spec.entity_name,
                 dead_letter_file.resolve().as_uri(),
-                f"raw.{spec.entity_name}",
+                f"{RAW_SCHEMA}.{spec.entity_name}",
                 replay_source_file,
                 started_at,
                 str(error)[:65535],

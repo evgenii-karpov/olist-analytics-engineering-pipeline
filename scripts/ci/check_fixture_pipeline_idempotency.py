@@ -37,7 +37,7 @@ DEFAULT_RAW_DIR = PROJECT_ROOT / "data" / "ci" / "raw" / "olist_small"
 DEFAULT_FIXTURE_BATCH_DATE = "2018-09-01"
 POSTGRES_SQL_DIR = PROJECT_ROOT / "infra" / "postgres"
 RESET_SCHEMAS = (
-    "raw",
+    "raw_data",
     "audit",
     "staging",
     "intermediate",

@@ -1,7 +1,7 @@
 -- Raw Olist source tables for local PostgreSQL.
 -- Raw tables are append-only and include ingestion metadata columns.
 
-create table if not exists raw.customers (
+create table if not exists raw_data.customers (
     customer_id varchar(256),
     customer_unique_id varchar(256),
     customer_zip_code_prefix varchar(16),
@@ -13,7 +13,7 @@ create table if not exists raw.customers (
     _source_system varchar(64) not null
 );
 
-create table if not exists raw.geolocation (
+create table if not exists raw_data.geolocation (
     geolocation_zip_code_prefix varchar(16),
     geolocation_lat decimal(18, 14),
     geolocation_lng decimal(18, 14),
@@ -25,7 +25,7 @@ create table if not exists raw.geolocation (
     _source_system varchar(64) not null
 );
 
-create table if not exists raw.order_items (
+create table if not exists raw_data.order_items (
     order_id varchar(256),
     order_item_id integer,
     product_id varchar(256),
@@ -39,7 +39,7 @@ create table if not exists raw.order_items (
     _source_system varchar(64) not null
 );
 
-create table if not exists raw.order_payments (
+create table if not exists raw_data.order_payments (
     order_id varchar(256),
     payment_sequential integer,
     payment_type varchar(256),
@@ -51,7 +51,7 @@ create table if not exists raw.order_payments (
     _source_system varchar(64) not null
 );
 
-create table if not exists raw.order_reviews (
+create table if not exists raw_data.order_reviews (
     review_id varchar(256),
     order_id varchar(256),
     review_score integer,
@@ -65,7 +65,7 @@ create table if not exists raw.order_reviews (
     _source_system varchar(64) not null
 );
 
-create table if not exists raw.orders (
+create table if not exists raw_data.orders (
     order_id varchar(256),
     customer_id varchar(256),
     order_status varchar(256),
@@ -80,7 +80,7 @@ create table if not exists raw.orders (
     _source_system varchar(64) not null
 );
 
-create table if not exists raw.products (
+create table if not exists raw_data.products (
     product_id varchar(256),
     product_category_name varchar(256),
     product_name_lenght integer,
@@ -96,7 +96,7 @@ create table if not exists raw.products (
     _source_system varchar(64) not null
 );
 
-create table if not exists raw.sellers (
+create table if not exists raw_data.sellers (
     seller_id varchar(256),
     seller_zip_code_prefix varchar(16),
     seller_city varchar(256),
@@ -107,7 +107,7 @@ create table if not exists raw.sellers (
     _source_system varchar(64) not null
 );
 
-create table if not exists raw.product_category_translation (
+create table if not exists raw_data.product_category_translation (
     product_category_name varchar(256),
     product_category_name_english varchar(256),
     _batch_id varchar(128) not null,

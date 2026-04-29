@@ -1,7 +1,7 @@
 -- Raw correction feed tables for SCD2 simulation.
 -- These tables are loaded from generated correction feeds.
 
-create table if not exists raw.customer_profile_changes (
+create table if not exists raw_data.customer_profile_changes (
     customer_unique_id varchar(256) encode zstd,
     effective_at timestamp encode zstd,
     customer_zip_code_prefix varchar(16) encode zstd,
@@ -16,7 +16,7 @@ create table if not exists raw.customer_profile_changes (
 diststyle auto
 sortkey(_loaded_at);
 
-create table if not exists raw.product_attribute_changes (
+create table if not exists raw_data.product_attribute_changes (
     product_id varchar(256) encode zstd,
     effective_at timestamp encode zstd,
     product_category_name varchar(256) encode zstd,

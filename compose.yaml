@@ -72,7 +72,7 @@ services:
       OLIST_AIRFLOW_RETRIES: "${OLIST_AIRFLOW_RETRIES:-2}"
       OLIST_AIRFLOW_RETRY_DELAY_SECONDS: "${OLIST_AIRFLOW_RETRY_DELAY_SECONDS:-300}"
       DBT_PROFILES_DIR: /opt/airflow/project/dbt/olist_analytics
-      DBT_TARGET: local_pg
+      DBT_TARGET: "${DBT_TARGET:-local_pg}"
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
       POSTGRES_DB: olist_analytics

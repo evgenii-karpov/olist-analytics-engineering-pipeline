@@ -1,7 +1,7 @@
-"""Local Airflow DAG for the Olist Modern Data Stack project.
+"""AWS Airflow DAG for the Olist Modern Data Stack project.
 
-This DAG is the default development entrypoint. It uses a local S3-shaped raw
-zone and PostgreSQL in Docker instead of S3 and Redshift.
+This DAG mirrors the local pipeline structure, but stages prepared files for S3
+and loads them into Redshift before running dbt on the Redshift target.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import Param, dag, get_current_context, task, task_group
 from airflow.sdk.exceptions import AirflowException
 
-DAG_ID = "olist_modern_data_stack_local"
+DAG_ID = "olist_modern_data_stack_aws"
 
 
 def resolve_project_root() -> Path:
@@ -42,9 +42,10 @@ PYTHON_BIN = os.environ.get("OLIST_PYTHON_BIN", "python")
 DBT_PROJECT_DIR = PROJECT_ROOT / "dbt" / "olist_analytics"
 DEFAULT_SOURCE_ARCHIVE = "olist.zip"
 DEFAULT_SOURCE_PROFILE = "docs/source_profile.json"
-DEFAULT_LOCAL_RAW_DIR = "data/raw/olist"
-POSTGRES_SQL_DIR = "infra/postgres"
-DEFAULT_DBT_TARGET = "local_pg"
+DEFAULT_PREPARED_DIR_TEMPLATE = "data/prepared/{ds_nodash}"
+DEFAULT_S3_PREFIX = "olist"
+DEFAULT_DBT_TARGET = "redshift"
+REDSHIFT_SQL_DIR = "infra/redshift"
 DEFAULT_RETRIES = int(os.environ.get("OLIST_AIRFLOW_RETRIES", "2"))
 DEFAULT_RETRY_DELAY_SECONDS = int(
     os.environ.get("OLIST_AIRFLOW_RETRY_DELAY_SECONDS", "300")
@@ -54,25 +55,56 @@ DEFAULT_RETRY_DELAY_SECONDS = int(
 DEFAULT_DEMO_BATCH_DATE = "2018-09-01"
 
 
-def local_run_id(run_id: str) -> str:
-    return run_id.replace(":", "_").replace("+", "_")
+def required_env(name: str) -> str:
+    value = os.environ.get(name)
+    if not value:
+        raise AirflowException(f"Missing required environment variable: {name}")
+    return value
 
 
-def run_project_command(command: list[str]) -> None:
-    subprocess.run(command, cwd=str(PROJECT_ROOT), check=True)
+def param_or_env(params: Mapping[str, Any], param_name: str, env_name: str) -> str:
+    value = str(params.get(param_name) or os.environ.get(env_name, ""))
+    if not value:
+        raise AirflowException(
+            f"Missing required DAG param {param_name!r} or environment variable {env_name}"
+        )
+    return value
 
 
-def current_batch_identifiers() -> tuple[Mapping[str, Any], str, str]:
+def run_project_command(command: list[str], env: dict[str, str] | None = None) -> None:
+    subprocess.run(
+        command,
+        cwd=str(PROJECT_ROOT),
+        check=True,
+        env=env,
+    )
+
+
+def current_batch_context() -> tuple[Mapping[str, Any], str, str, str]:
     context = get_current_context()
     params = context.get("params")
+    ds_nodash = context.get("ds_nodash")
     run_id = context.get("run_id")
     if not isinstance(params, Mapping):
         raise AirflowException("Airflow task context is missing params")
+    if ds_nodash is None:
+        raise AirflowException("Airflow task context is missing ds_nodash")
     if run_id is None:
         raise AirflowException("Airflow task context is missing run_id")
 
     batch_date = str(params["batch_date"])
-    return params, batch_date, local_run_id(str(run_id))
+    artifact_dir = str(params["prepared_dir_template"]).format(ds_nodash=ds_nodash)
+    return params, batch_date, str(run_id), artifact_dir
+
+
+def redshift_batch_control_env() -> dict[str, str]:
+    env = os.environ.copy()
+    env["WAREHOUSE_HOST"] = required_env("REDSHIFT_HOST")
+    env["WAREHOUSE_PORT"] = os.environ.get("REDSHIFT_PORT", "5439")
+    env["WAREHOUSE_DB"] = required_env("REDSHIFT_DATABASE")
+    env["WAREHOUSE_USER"] = required_env("REDSHIFT_USER")
+    env["WAREHOUSE_PASSWORD"] = required_env("REDSHIFT_PASSWORD")
+    return env
 
 
 def batch_control_args(
@@ -98,7 +130,7 @@ def batch_control_args(
         raw_dir,
     ]
     if command == "start":
-        args.extend(["--bootstrap-sql-dir", POSTGRES_SQL_DIR])
+        args.extend(["--bootstrap-sql-dir", REDSHIFT_SQL_DIR])
     if status:
         args.extend(["--status", status])
     return args
@@ -110,7 +142,11 @@ def mark_batch_failed(context: dict) -> None:
     task_id = getattr(task_instance, "task_id", "unknown_task")
     exception = context.get("exception")
     batch_date = str(params.get("batch_date", DEFAULT_DEMO_BATCH_DATE))
-    raw_dir = str(params.get("raw_dir", DEFAULT_LOCAL_RAW_DIR))
+    ds_nodash = str(context.get("ds_nodash", "unknown_ds"))
+    artifact_dir = str(
+        params.get("prepared_dir_template", DEFAULT_PREPARED_DIR_TEMPLATE)
+    )
+    raw_dir = artifact_dir.format(ds_nodash=ds_nodash)
     error_message = f"{task_id}: {exception}"[:65535]
 
     subprocess.run(
@@ -123,18 +159,19 @@ def mark_batch_failed(context: dict) -> None:
             "--batch-id",
             batch_date,
             "--run-id",
-            local_run_id(str(context.get("run_id", "unknown_run"))),
+            str(context.get("run_id", "unknown_run")),
             "--dag-id",
             DAG_ID,
             "--raw-dir",
             raw_dir,
             "--bootstrap-sql-dir",
-            POSTGRES_SQL_DIR,
+            REDSHIFT_SQL_DIR,
             "--error-message",
             error_message,
         ],
         cwd=str(PROJECT_ROOT),
         check=False,
+        env=redshift_batch_control_env(),
     )
 
 
@@ -175,10 +212,25 @@ dag_params = {
         type="string",
         description="Path to the source profile JSON file.",
     ),
-    "raw_dir": Param(
-        DEFAULT_LOCAL_RAW_DIR,
+    "prepared_dir_template": Param(
+        DEFAULT_PREPARED_DIR_TEMPLATE,
         type="string",
-        description="Local raw-zone directory used by ingestion and raw load tasks.",
+        description="Local prepared-file directory template. Supports {ds_nodash}.",
+    ),
+    "s3_bucket": Param(
+        os.environ.get("OLIST_S3_BUCKET", ""),
+        type="string",
+        description="S3 bucket for prepared raw files. Falls back to OLIST_S3_BUCKET.",
+    ),
+    "s3_prefix": Param(
+        os.environ.get("OLIST_S3_PREFIX", DEFAULT_S3_PREFIX),
+        type="string",
+        description="S3 prefix for prepared raw files.",
+    ),
+    "aws_region": Param(
+        os.environ.get("AWS_REGION", "us-east-1"),
+        type="string",
+        description="AWS region used by Redshift COPY.",
     ),
     "dead_letter_max_rows": Param(
         10,
@@ -199,43 +251,45 @@ dag_params = {
 
 @dag(
     dag_id=DAG_ID,
-    description="Olist batch pipeline: local raw files, PostgreSQL load, and dbt transformations.",
+    description="Olist batch pipeline: S3 raw files, Redshift load, and dbt transformations.",
     default_args=default_args,
     start_date=datetime(2016, 9, 1),
     schedule=None,
     catchup=False,
     max_active_runs=1,
-    tags=["olist", "local", "postgres", "dbt"],
+    tags=["olist", "aws", "s3", "redshift", "dbt"],
     params=dag_params,
 )
-def olist_modern_data_stack_local():
+def olist_modern_data_stack_aws():
     start = EmptyOperator(task_id="start")
 
     @task
     def start_batch() -> None:
-        params, batch_date, run_id = current_batch_identifiers()
+        _, batch_date, run_id, artifact_dir = current_batch_context()
         run_project_command(
-            batch_control_args("start", batch_date, run_id, str(params["raw_dir"]))
+            batch_control_args("start", batch_date, run_id, artifact_dir),
+            env=redshift_batch_control_env(),
         )
 
     @task
     def mark_batch_status(status: str) -> None:
-        params, batch_date, run_id = current_batch_identifiers()
+        _, batch_date, run_id, artifact_dir = current_batch_context()
         run_project_command(
             batch_control_args(
                 "mark",
                 batch_date,
                 run_id,
-                str(params["raw_dir"]),
+                artifact_dir,
                 status=status,
-            )
+            ),
+            env=redshift_batch_control_env(),
         )
 
     @task_group(group_id="raw_preparation")
     def raw_preparation():
         @task
         def validate_source_contract() -> None:
-            params, _, _ = current_batch_identifiers()
+            params, _, _, _ = current_batch_context()
             run_project_command(
                 [
                     PYTHON_BIN,
@@ -248,34 +302,39 @@ def olist_modern_data_stack_local():
             )
 
         @task
-        def prepare_raw_files() -> None:
-            params, batch_date, run_id = current_batch_identifiers()
+        def upload_raw_files_to_s3() -> None:
+            params, batch_date, run_id, artifact_dir = current_batch_context()
             run_project_command(
                 [
                     PYTHON_BIN,
-                    "scripts/ingestion/prepare_olist_raw_files.py",
+                    "scripts/ingestion/ingest_olist_to_s3.py",
                     "--archive",
                     str(params["source_archive"]),
                     "--profile",
                     str(params["source_profile"]),
                     "--output-dir",
-                    str(params["raw_dir"]),
+                    artifact_dir,
                     "--batch-date",
                     batch_date,
                     "--batch-id",
                     batch_date,
                     "--run-id",
                     run_id,
+                    "--s3-bucket",
+                    param_or_env(params, "s3_bucket", "OLIST_S3_BUCKET"),
+                    "--s3-prefix",
+                    str(params["s3_prefix"]),
                     "--dead-letter-max-rows",
                     str(params["dead_letter_max_rows"]),
                     "--dead-letter-max-rate",
                     str(params["dead_letter_max_rate"]),
+                    "--upload",
                 ]
             )
 
         @task
         def generate_correction_feeds() -> None:
-            params, batch_date, run_id = current_batch_identifiers()
+            params, batch_date, run_id, artifact_dir = current_batch_context()
             run_project_command(
                 [
                     PYTHON_BIN,
@@ -283,17 +342,22 @@ def olist_modern_data_stack_local():
                     "--archive",
                     str(params["source_archive"]),
                     "--output-dir",
-                    str(params["raw_dir"]),
+                    artifact_dir,
                     "--batch-date",
                     batch_date,
                     "--batch-id",
                     batch_date,
                     "--run-id",
                     run_id,
+                    "--s3-bucket",
+                    param_or_env(params, "s3_bucket", "OLIST_S3_BUCKET"),
+                    "--s3-prefix",
+                    str(params["s3_prefix"]),
                     "--dead-letter-max-rows",
                     str(params["dead_letter_max_rows"]),
                     "--dead-letter-max-rate",
                     str(params["dead_letter_max_rate"]),
+                    "--upload",
                 ]
             )
 
@@ -301,7 +365,7 @@ def olist_modern_data_stack_local():
         source_validated = mark_batch_status.override(task_id="mark_source_validated")(
             "SOURCE_VALIDATED"
         )
-        raw_files = prepare_raw_files()
+        raw_files = upload_raw_files_to_s3()
         correction_feeds = generate_correction_feeds()
         raw_prepared = mark_batch_status.override(task_id="mark_raw_prepared")(
             "RAW_PREPARED"
@@ -313,18 +377,18 @@ def olist_modern_data_stack_local():
     @task_group(group_id="raw_load_quality")
     def raw_load_quality():
         @task
-        def load_raw_files_to_postgres() -> None:
-            params, batch_date, run_id = current_batch_identifiers()
+        def load_raw_files_to_redshift() -> None:
+            params, batch_date, run_id, artifact_dir = current_batch_context()
             run_project_command(
                 [
                     PYTHON_BIN,
-                    "scripts/loading/load_raw_to_postgres.py",
+                    "scripts/loading/load_raw_to_redshift.py",
                     "--raw-dir",
-                    str(params["raw_dir"]),
+                    artifact_dir,
                     "--profile",
                     str(params["source_profile"]),
                     "--bootstrap-sql-dir",
-                    POSTGRES_SQL_DIR,
+                    REDSHIFT_SQL_DIR,
                     "--batch-date",
                     batch_date,
                     "--batch-id",
@@ -333,22 +397,28 @@ def olist_modern_data_stack_local():
                     run_id,
                     "--dag-id",
                     DAG_ID,
+                    "--s3-bucket",
+                    param_or_env(params, "s3_bucket", "OLIST_S3_BUCKET"),
+                    "--s3-prefix",
+                    str(params["s3_prefix"]),
+                    "--aws-region",
+                    str(params["aws_region"]),
                 ]
             )
 
         @task
         def reconcile_raw_load() -> None:
-            params, batch_date, run_id = current_batch_identifiers()
+            params, batch_date, run_id, artifact_dir = current_batch_context()
             run_project_command(
                 [
                     PYTHON_BIN,
                     "scripts/quality/reconcile_batch.py",
                     "--raw-dir",
-                    str(params["raw_dir"]),
+                    artifact_dir,
                     "--profile",
                     str(params["source_profile"]),
                     "--bootstrap-sql-dir",
-                    POSTGRES_SQL_DIR,
+                    REDSHIFT_SQL_DIR,
                     "--batch-date",
                     batch_date,
                     "--batch-id",
@@ -357,10 +427,11 @@ def olist_modern_data_stack_local():
                     run_id,
                     "--dag-id",
                     DAG_ID,
-                ]
+                ],
+                env=redshift_batch_control_env(),
             )
 
-        _ = load_raw_files_to_postgres() >> reconcile_raw_load()
+        _ = load_raw_files_to_redshift() >> reconcile_raw_load()
 
     @task_group(group_id="dbt_transformations")
     def dbt_transformations():
@@ -401,4 +472,4 @@ def olist_modern_data_stack_local():
     )
 
 
-olist_modern_data_stack_local()
+olist_modern_data_stack_aws()

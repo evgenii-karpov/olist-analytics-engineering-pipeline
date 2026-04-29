@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterable
 
 from scripts.ingestion.raw_files import PreparedFile
@@ -30,7 +31,24 @@ def upload_files_to_s3(
             "boto3 is required for S3 upload. Install project dependencies first."
         ) from exc
 
-    s3_client = boto3.client("s3")
+    client_kwargs: dict[str, str] = {}
+    aws_region = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION")
+    if aws_region:
+        client_kwargs["region_name"] = aws_region
+
+    try:
+        s3_client = boto3.client("s3", **client_kwargs)
+    except Exception as exc:
+        diagnostics = {
+            "aws_region": os.environ.get("AWS_REGION", "<unset>"),
+            "aws_default_region": os.environ.get("AWS_DEFAULT_REGION", "<unset>"),
+            "has_access_key": str(bool(os.environ.get("AWS_ACCESS_KEY_ID"))),
+            "has_secret_key": str(bool(os.environ.get("AWS_SECRET_ACCESS_KEY"))),
+            "has_session_token": str(bool(os.environ.get("AWS_SESSION_TOKEN"))),
+        }
+        formatted = ", ".join(f"{key}={value}" for key, value in diagnostics.items())
+        raise RuntimeError(f"Failed to initialize S3 client: {formatted}") from exc
+
     for prepared_file in prepared_files:
         s3_key = s3_key_for(prefix, prepared_file.relative_path)
         s3_client.upload_file(str(prepared_file.local_path), bucket, s3_key)

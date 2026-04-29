@@ -21,6 +21,7 @@ from psycopg2 import sql
 from psycopg2.extensions import connection as PgConnection
 
 from scripts.loading.load_raw_to_postgres import (
+    RAW_SCHEMA,
     RawLoadSpec,
     execute_sql_files,
     fetch_one,
@@ -68,7 +69,11 @@ def utc_now() -> datetime:
     return datetime.now(UTC).replace(microsecond=0, tzinfo=None)
 
 
-def postgres_connection(args: argparse.Namespace) -> PgConnection:
+def warehouse_env(name: str, postgres_fallback: str, default: str) -> str:
+    return os.environ.get(name, os.environ.get(postgres_fallback, default))
+
+
+def warehouse_connection(args: argparse.Namespace) -> PgConnection:
     return psycopg2.connect(
         host=args.host,
         port=args.port,
@@ -89,7 +94,7 @@ def count_raw_rows(
     batch_id: str,
 ) -> int:
     count_statement = sql.SQL("select count(*) from {}.{} where _batch_id = %s").format(
-        sql.Identifier("raw"), sql.Identifier(spec.entity_name)
+        sql.Identifier(RAW_SCHEMA), sql.Identifier(spec.entity_name)
     )
     with connection.cursor() as cursor:
         cursor.execute(count_statement, (batch_id,))
@@ -313,18 +318,26 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dag-id")
     parser.add_argument("--no-fail-on-mismatch", action="store_true")
     parser.add_argument("--disable-batch-control", action="store_true")
-    parser.add_argument("--host", default=os.environ.get("POSTGRES_HOST", "localhost"))
+    parser.add_argument(
+        "--host",
+        default=warehouse_env("WAREHOUSE_HOST", "POSTGRES_HOST", "localhost"),
+    )
     parser.add_argument(
         "--port",
         type=int,
-        default=int(os.environ.get("POSTGRES_PORT", "5432")),
+        default=int(warehouse_env("WAREHOUSE_PORT", "POSTGRES_PORT", "5432")),
     )
     parser.add_argument(
-        "--database", default=os.environ.get("POSTGRES_DB", "olist_analytics")
+        "--database",
+        default=warehouse_env("WAREHOUSE_DB", "POSTGRES_DB", "olist_analytics"),
     )
-    parser.add_argument("--user", default=os.environ.get("POSTGRES_USER", "olist"))
     parser.add_argument(
-        "--password", default=os.environ.get("POSTGRES_PASSWORD", "olist")
+        "--user",
+        default=warehouse_env("WAREHOUSE_USER", "POSTGRES_USER", "olist"),
+    )
+    parser.add_argument(
+        "--password",
+        default=warehouse_env("WAREHOUSE_PASSWORD", "POSTGRES_PASSWORD", "olist"),
     )
     return parser.parse_args()
 
@@ -333,7 +346,7 @@ def main() -> None:
     args = parse_args()
     batch_id = args.batch_id or args.batch_date
     raw_dir = Path(args.raw_dir)
-    connection = postgres_connection(args)
+    connection = warehouse_connection(args)
     try:
         if args.bootstrap_sql_dir:
             execute_sql_files(connection, Path(args.bootstrap_sql_dir))

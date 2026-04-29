@@ -49,7 +49,11 @@ def utc_now() -> datetime:
     return datetime.now(UTC).replace(microsecond=0, tzinfo=None)
 
 
-def postgres_connection(args: argparse.Namespace) -> PgConnection:
+def warehouse_env(name: str, postgres_fallback: str, default: str) -> str:
+    return os.environ.get(name, os.environ.get(postgres_fallback, default))
+
+
+def warehouse_connection(args: argparse.Namespace) -> PgConnection:
     return psycopg2.connect(
         host=args.host,
         port=args.port,
@@ -279,18 +283,26 @@ def parse_args() -> argparse.Namespace:
     add_common_args(fail_parser)
     fail_parser.add_argument("--error-message")
 
-    parser.add_argument("--host", default=os.environ.get("POSTGRES_HOST", "localhost"))
+    parser.add_argument(
+        "--host",
+        default=warehouse_env("WAREHOUSE_HOST", "POSTGRES_HOST", "localhost"),
+    )
     parser.add_argument(
         "--port",
         type=int,
-        default=int(os.environ.get("POSTGRES_PORT", "5432")),
+        default=int(warehouse_env("WAREHOUSE_PORT", "POSTGRES_PORT", "5432")),
     )
     parser.add_argument(
-        "--database", default=os.environ.get("POSTGRES_DB", "olist_analytics")
+        "--database",
+        default=warehouse_env("WAREHOUSE_DB", "POSTGRES_DB", "olist_analytics"),
     )
-    parser.add_argument("--user", default=os.environ.get("POSTGRES_USER", "olist"))
     parser.add_argument(
-        "--password", default=os.environ.get("POSTGRES_PASSWORD", "olist")
+        "--user",
+        default=warehouse_env("WAREHOUSE_USER", "POSTGRES_USER", "olist"),
+    )
+    parser.add_argument(
+        "--password",
+        default=warehouse_env("WAREHOUSE_PASSWORD", "POSTGRES_PASSWORD", "olist"),
     )
     return parser.parse_args()
 
@@ -318,7 +330,7 @@ def main() -> None:
     context = context_from_args(args)
     raw_dir = Path(args.raw_dir) if args.raw_dir else None
 
-    connection = postgres_connection(args)
+    connection = warehouse_connection(args)
     try:
         if args.bootstrap_sql_dir:
             execute_sql_files(connection, Path(args.bootstrap_sql_dir))
