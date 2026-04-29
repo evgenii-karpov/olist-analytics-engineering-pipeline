@@ -3,6 +3,11 @@
 The GitHub Actions workflow is split into focused jobs so a failing check points
 to a useful layer instead of one opaque pipeline failure.
 
+CI intentionally runs only the local PostgreSQL execution path. The AWS/S3/
+Redshift path is available for manual validation, but pull-request checks stay
+local so they remain reproducible, self-contained, and independent of cloud
+credentials or infrastructure availability.
+
 ## Workflow
 
 ```text

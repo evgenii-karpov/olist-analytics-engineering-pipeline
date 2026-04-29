@@ -1,18 +1,20 @@
 # Olist Modern Data Stack
 
-Local-first data engineering project built around the Olist Brazilian
-e-commerce dataset. The active stack is Python ingestion, a filesystem raw zone
-with S3-style paths, PostgreSQL in Docker, Apache Airflow, and dbt.
+Data engineering project built around the Olist Brazilian e-commerce dataset.
+The default development path uses Python ingestion, a filesystem raw zone with
+S3-style paths, PostgreSQL in Docker, Apache Airflow, and dbt. An AWS path is
+also available with S3-backed raw files and Redshift as the warehouse target.
 
-The repository is intended to be reviewable without cloud access. Redshift SQL
-artifacts are kept as reference material, but the runnable project does not
-require AWS or Redshift.
+The repository remains reviewable without cloud access, but it is no longer
+limited to local execution. You can run the default local DAG end to end or use
+the AWS/Redshift DAG when cloud infrastructure is available.
 
 ## What It Demonstrates
 
 - End-to-end batch pipeline from CSV archive to analytics marts.
 - Deterministic raw-zone contract that can map to local files or object
   storage.
+- Parallel Airflow DAG variants for local PostgreSQL and AWS Redshift runs.
 - Row-level validation, dead-letter files, threshold checks, and replay support.
 - Warehouse audit tables for batch state, raw load attempts, reconciliation,
   dead-letter events, and replays.
@@ -31,8 +33,8 @@ require AWS or Redshift.
 ```text
 Olist CSV archive
   -> Python ingestion and validation
-  -> local S3-shaped raw zone plus dead-letter zone
-  -> PostgreSQL raw and audit schemas
+  -> raw and dead-letter zones on local storage or S3
+  -> PostgreSQL or Redshift raw and audit schemas
   -> dbt staging, intermediate, snapshots, core, and marts
   -> Airflow-controlled quality gates
 ```
@@ -41,14 +43,14 @@ Olist CSV archive
 
 ```text
 airflow/
-  dags/                 Local Airflow DAG plus preserved Redshift DAG.
+  dags/                 Local and AWS Airflow DAGs with separate dbt targets.
 
 dbt/
   olist_analytics/      dbt project: sources, models, snapshots, tests,
                         analyses, macros, and profile example.
 
 docker/
-  airflow/              Local Airflow image and container entrypoint.
+  airflow/              Airflow image and container entrypoint for local and AWS runs.
 
 docs/
   architecture.md       System design, orchestration, audit, and reliability.
@@ -60,13 +62,13 @@ docs/
   runbook_windows.md    Windows local setup and execution commands.
 
 infra/
-  postgres/             Local warehouse DDL for schemas, raw tables, audit,
+  postgres/             PostgreSQL warehouse DDL for schemas, raw tables, audit,
                         and correction tables.
-  redshift/             Reference Redshift DDL and COPY templates.
+  redshift/             Redshift warehouse DDL and COPY templates.
 
 scripts/
   ingestion/            Source validation, raw file preparation, corrections.
-  loading/              PostgreSQL raw load and dead-letter replay.
+  loading/              PostgreSQL/Redshift raw load and dead-letter replay.
   orchestration/        Batch-control helpers.
   quality/              Reconciliation checks.
   testing/              Fixture generation.
@@ -80,7 +82,7 @@ tests/
 
 ## Main Design Choices
 
-- The local pipeline is the default path; cloud services are not required.
+- The local pipeline is the default path, but the AWS/Redshift path is also supported.
 - Raw files are immutable and partitioned by entity, batch date, and run id.
 - Structural source-contract failures fail fast, while record-level failures
   are isolated in the dead-letter zone.
@@ -89,8 +91,10 @@ tests/
 - Reconciliation runs before dbt so silent data loss or duplicate raw loads stop
   the pipeline early.
 - dbt owns analytical modeling and data quality checks after the raw load.
-- CI uses a small deterministic fixture so pull-request checks stay fast while
-  still covering the real ingestion, loading, reconciliation, and dbt path.
+- CI intentionally stays on the local PostgreSQL path so pull-request checks
+  remain reproducible, self-contained, and fast.
+- CI uses a small deterministic fixture while still covering the real
+  ingestion, loading, reconciliation, and dbt path.
 
 ## Running Locally
 
@@ -101,6 +105,9 @@ Use the OS-specific runbook:
 
 Both runbooks cover dependency setup, Docker Compose, manual smoke runs, the
 Airflow DAG, dbt execution, CI-style fixture validation, and cleanup.
+
+For AWS/Redshift execution, use the AWS DAG together with the optional
+environment variables described in `.env.example`.
 
 ## Data License
 

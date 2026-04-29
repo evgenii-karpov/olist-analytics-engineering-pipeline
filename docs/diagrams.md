@@ -8,11 +8,11 @@ flowchart LR
     corrections["Generated correction feeds"]
     ingestion["Python ingestion scripts"]
     validation["Row-level validation"]
-    rawzone["Local S3-shaped raw zone"]
+    rawzone["Raw zone\nLocal filesystem or S3"]
     dlq["Dead-letter zone"]
-    copy["PostgreSQL COPY FROM STDIN"]
+    copy["Warehouse load\nPostgreSQL COPY FROM STDIN or Redshift COPY"]
     reconcile["Reconciliation"]
-    raw["raw schema"]
+    raw["raw_data schema\nPostgreSQL or Redshift"]
     batchcontrol["audit.batch_runs"]
     audit["audit.dead_letter_events"]
     staging["dbt staging views"]
@@ -62,7 +62,7 @@ flowchart LR
     rejected["Dead-letter CSV.gz"]
     corrected["Corrected dead-letter CSV.gz"]
     threshold["Threshold check"]
-    load["PostgreSQL raw load"]
+    load["Warehouse raw load"]
     replay["Replay fixed rows"]
     stop["Stop DAG before load"]
     audit["audit.dead_letter_events"]
@@ -85,7 +85,7 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    raw["raw\nAppend-only PostgreSQL tables loaded from local raw files"]
+    raw["raw_data\nAppend-only warehouse tables loaded from local files or S3"]
     staging["staging\nTyped and cleaned dbt views"]
     intermediate["intermediate\nReusable business logic"]
     snapshots["snapshots\nSCD2 history managed by dbt"]
@@ -205,15 +205,15 @@ erDiagram
 sequenceDiagram
     participant Airflow
     participant Generator as Correction Feed Generator
-    participant RawZone as Local Raw Zone
-    participant Postgres as PostgreSQL
+    participant RawZone as Raw Zone
+    participant Warehouse as PostgreSQL or Redshift
     participant dbt
 
     Airflow->>Generator: Generate corrections visible as of batch_date
     Generator->>RawZone: Write customer/product correction feeds
-    Airflow->>Postgres: COPY raw correction tables
+    Airflow->>Warehouse: Load raw correction tables
     Airflow->>dbt: Run snapshot step for batch_date
-    dbt->>Postgres: Read current attributes as of batch_date
-    dbt->>Postgres: Insert new snapshot versions when tracked attributes change
+    dbt->>Warehouse: Read current attributes as of batch_date
+    dbt->>Warehouse: Insert new snapshot versions when tracked attributes change
     Airflow->>dbt: Build core models and marts
 ```
